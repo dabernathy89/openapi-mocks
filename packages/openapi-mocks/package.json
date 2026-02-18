@@ -24,10 +24,19 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "msw": "^2.12.10",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-dts": "^4.5.4",
     "vitest": "^3.2.4"
+  },
+  "peerDependencies": {
+    "msw": ">=2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "msw": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@apidevtools/swagger-parser": "^12.1.0",
