@@ -49,19 +49,33 @@ function getCandidateNames(paramName: string): string[] {
 }
 
 /**
+ * A minimal schema shape for type coercion checks.
+ * We only need the `type` and `properties` fields.
+ */
+export interface EchoSchema {
+  type?: string | string[];
+  properties?: Record<string, EchoSchema>;
+}
+
+/**
  * Apply path parameter values to a generated response object.
  *
  * For each path parameter in `pathParams`, if the response object contains a
  * property with a matching name (or its camelCase/snake_case variant), the
  * generated value is replaced with the path parameter value.
  *
+ * Numeric coercion: if the response schema declares the matched property as
+ * `integer` or `number`, the string param value is parsed to a number.
+ *
  * @param data - The generated response object (mutated in place)
  * @param pathParams - Record of path parameter names to their values
+ * @param schema - Optional response schema for type coercion
  * @returns The same data object, with path param values injected
  */
 export function applyEchoPathParams(
   data: Record<string, unknown>,
   pathParams: Record<string, string>,
+  schema?: EchoSchema,
 ): Record<string, unknown> {
   if (!data || typeof data !== 'object') return data;
 
@@ -70,7 +84,20 @@ export function applyEchoPathParams(
 
     for (const candidate of candidates) {
       if (Object.prototype.hasOwnProperty.call(data, candidate)) {
-        data[candidate] = paramValue;
+        // Check if the schema declares this property as numeric
+        const propSchema = schema?.properties?.[candidate];
+        const propType = propSchema?.type;
+        const isNumeric =
+          propType === 'integer' ||
+          propType === 'number' ||
+          (Array.isArray(propType) && (propType.includes('integer') || propType.includes('number')));
+
+        if (isNumeric) {
+          const parsed = Number(paramValue);
+          data[candidate] = isNaN(parsed) ? paramValue : parsed;
+        } else {
+          data[candidate] = paramValue;
+        }
         break; // Only apply to the first matching property
       }
     }

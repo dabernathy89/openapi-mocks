@@ -3,7 +3,7 @@ import type { OpenAPIV3, OpenAPIV3_1 } from 'openapi-types';
 import { resolveSpec, type SpecInput } from './parser.js';
 import { generateValueForSchema, type Schema } from './generators/schema-walker.js';
 import { applyOverrides } from './utils/deep-set.js';
-import { applyEchoPathParams } from './utils/echo-path-params.js';
+import { applyEchoPathParams, type EchoSchema } from './utils/echo-path-params.js';
 
 // HTTP methods that can have operations in OpenAPI
 const HTTP_METHODS = ['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace'] as const;
@@ -434,6 +434,7 @@ export function createMockClient(spec: SpecInput, options: GlobalOptions = {}): 
         const capturedStatusCode = statusCode;
         const capturedIgnoreExamples = ignoreExamples;
         const capturedEchoPathParams = globalEchoPathParams;
+        const capturedResponseSchema = responseSchema;
 
         const httpMethod = method as keyof typeof http;
         const handlerFn = http[httpMethod];
@@ -468,7 +469,7 @@ export function createMockClient(spec: SpecInput, options: GlobalOptions = {}): 
             for (const [k, v] of Object.entries(params)) {
               flatParams[k] = Array.isArray(v) ? v[0] ?? '' : v;
             }
-            responseData = applyEchoPathParams(responseData, flatParams);
+            responseData = applyEchoPathParams(responseData, flatParams, capturedResponseSchema as EchoSchema);
           }
 
           return HttpResponse.json(responseData, { status: capturedStatusCode });
