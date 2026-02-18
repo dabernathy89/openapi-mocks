@@ -1,3 +1,18 @@
+## 2026-02-18 - US-027
+- What was implemented: semantic-release configuration for automated npm publishing
+- Files changed:
+  - `.releaserc` — new file with semantic-release config: commit-analyzer, release-notes-generator, changelog, npm (pkgRoot: packages/openapi-mocks), git (assets: CHANGELOG.md + packages/openapi-mocks/package.json), github plugins
+  - `package.json` (root) — added `"release": "semantic-release"` script; `@semantic-release/*` plugins installed as root devDependencies
+  - `packages/openapi-mocks/package.json` — added `"publishConfig": { "access": "public" }` field
+  - `pnpm-lock.yaml` — updated with new devDependencies
+  - `.chief/prds/main/prd.json` — marked US-027 as passes: true
+- **Learnings for future iterations:**
+  - semantic-release installs at the root (not the library package) since it runs in CI context with access to all packages
+  - `pkgRoot` in `@semantic-release/npm` points to the package directory — semantic-release will publish from there, picking up its `package.json` and `dist/`
+  - `@semantic-release/git` assets should include both `CHANGELOG.md` and `packages/openapi-mocks/package.json` (the latter gets its version bumped by the npm plugin)
+  - No CI workflow was added (acceptance criteria only required the config and scripts) — the release config is ready for CI integration separately
+---
+
 ## 2026-02-18 - US-026
 - What was implemented: Custom `OpenApiMocksError` class; updated all `throw new Error(...)` calls in the library to use `OpenApiMocksError`; exported from public API; wrote unit tests
 - Files changed:
