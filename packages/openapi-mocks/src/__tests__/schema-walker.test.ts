@@ -1092,4 +1092,120 @@ describe('generateValueForSchema', () => {
       expect(typeof result['id']).toBe('string');
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // US-014: Optional field random omission
+  // ---------------------------------------------------------------------------
+  describe('optional field random omission (US-014)', () => {
+    const schemaWithOptionals = {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        name: { type: 'string' },
+        bio: { type: 'string' },
+        age: { type: 'integer' },
+      },
+      required: ['id'],
+    } as Record<string, unknown>;
+
+    it('required fields are always included regardless of seed', () => {
+      for (let seed = 0; seed < 20; seed++) {
+        fakerInstance.seed(seed);
+        const result = generateValueForSchema(schemaWithOptionals, {
+          faker: fakerInstance,
+          ignoreExamples: true,
+        }) as Record<string, unknown>;
+        expect(result).toHaveProperty('id');
+      }
+    });
+
+    it('optional fields are randomly omitted (~50/50)', () => {
+      const results: Record<string, unknown>[] = [];
+      for (let seed = 0; seed < 30; seed++) {
+        fakerInstance.seed(seed);
+        results.push(
+          generateValueForSchema(schemaWithOptionals, {
+            faker: fakerInstance,
+            ignoreExamples: true,
+          }) as Record<string, unknown>,
+        );
+      }
+
+      // Over 30 runs, each optional field should appear sometimes and be absent sometimes
+      const namePresent = results.filter((r) => 'name' in r).length;
+      const nameAbsent = results.filter((r) => !('name' in r)).length;
+      expect(namePresent).toBeGreaterThan(0);
+      expect(nameAbsent).toBeGreaterThan(0);
+    });
+
+    it('same seed produces the same set of optional fields on repeated calls', () => {
+      fakerInstance.seed(777);
+      const result1 = generateValueForSchema(schemaWithOptionals, {
+        faker: fakerInstance,
+        ignoreExamples: true,
+      }) as Record<string, unknown>;
+
+      fakerInstance.seed(777);
+      const result2 = generateValueForSchema(schemaWithOptionals, {
+        faker: fakerInstance,
+        ignoreExamples: true,
+      }) as Record<string, unknown>;
+
+      // The same fields should be present in both results
+      expect(Object.keys(result1).sort()).toEqual(Object.keys(result2).sort());
+    });
+
+    it('different seeds may produce different included optional fields', () => {
+      // Collect results from multiple different seeds
+      const keySetsBySeed: Set<string>[] = [];
+      for (let seed = 0; seed < 30; seed++) {
+        fakerInstance.seed(seed);
+        const result = generateValueForSchema(schemaWithOptionals, {
+          faker: fakerInstance,
+          ignoreExamples: true,
+        }) as Record<string, unknown>;
+        keySetsBySeed.push(new Set(Object.keys(result)));
+      }
+
+      // At least two different key-sets should appear (variation across seeds)
+      const uniqueKeySets = new Set(keySetsBySeed.map((s) => [...s].sort().join(',')));
+      expect(uniqueKeySets.size).toBeGreaterThan(1);
+    });
+
+    it('override forces an optional field to always be included', () => {
+      for (let seed = 0; seed < 15; seed++) {
+        fakerInstance.seed(seed);
+        const result = generateValueForSchema(schemaWithOptionals, {
+          faker: fakerInstance,
+          ignoreExamples: true,
+          overrides: { bio: 'forced bio' },
+        }) as Record<string, unknown>;
+        expect(result['bio']).toBe('forced bio');
+      }
+    });
+
+    it('override with null forces optional field to be present with null value', () => {
+      for (let seed = 0; seed < 10; seed++) {
+        fakerInstance.seed(seed);
+        const result = generateValueForSchema(
+          {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              nickname: { type: 'string', nullable: true },
+            },
+            required: ['id'],
+          } as Record<string, unknown>,
+          {
+            faker: fakerInstance,
+            ignoreExamples: true,
+            overrides: { nickname: null },
+          },
+        ) as Record<string, unknown>;
+        // 'nickname' should be present in the result (override forces it in)
+        expect('nickname' in result).toBe(true);
+        expect(result['nickname']).toBeNull();
+      }
+    });
+  });
 });

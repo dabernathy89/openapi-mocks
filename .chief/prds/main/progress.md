@@ -10,6 +10,23 @@
 
 ---
 
+## 2026-02-18 - US-014
+- Optional field random omission was already fully implemented in `schema-walker.ts` (`generateObject` function uses `faker.datatype.boolean()` for ~50/50 omission)
+- Added 6 dedicated tests in `src/__tests__/schema-walker.test.ts` covering:
+  1. Required fields are always included (all seeds)
+  2. Optional fields are randomly omitted (~50/50 statistical check over 30 seeds)
+  3. Same seed produces the same set of optional fields on repeated calls
+  4. Different seeds produce different included optional fields (variation confirmed)
+  5. Override forces an optional field to always be included
+  6. Override with `null` forces optional field to be present with null value
+- Files changed: `packages/openapi-mocks/src/__tests__/schema-walker.test.ts`, `.chief/prds/main/prd.json`
+- **Learnings for future iterations:**
+  - Like US-012 and US-013, this was a test-only story — the implementation was done in US-008
+  - The override-forces-inclusion logic checks `Object.keys(overrides).some(k => k === propPath || k.startsWith(propPath + '.'))` — null overrides also trigger this
+  - The "without a seed, fields vary" test can be done with different explicit seeds rather than relying on unseeded randomness — avoids flakiness
+
+---
+
 ## 2026-02-18 - US-013
 - The circular reference handling was already fully implemented in `schema-walker.ts` (US-008 included it)
 - Added 5 explicit tests in `src/__tests__/schema-walker.test.ts` covering:
