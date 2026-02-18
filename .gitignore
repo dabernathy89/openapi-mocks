@@ -1,0 +1,50 @@
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+dist-ssr/
+*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# Test / coverage
+coverage/
+.nyc_output/
+
+# Vitest
+vitest.coverage/
+
+# Astro
+docs/.astro/
+docs/dist/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# semantic-release / release artifacts
+CHANGELOG.md
+
+# Tool internals
+.chief/prds/*/claude.log

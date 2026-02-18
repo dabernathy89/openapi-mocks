@@ -1,0 +1,653 @@
+# PRD: openapi-mocks
+
+## Introduction
+
+`openapi-mocks` is a TypeScript library that parses OpenAPI 3.0.x / 3.1.x documents and generates realistic mock data and pre-built MSW (Mock Service Worker) v2 request handlers. Consumers get spec-compliant fake data for tests, stories, and local dev — all from a single OpenAPI source of truth.
+
+The project ships as a pnpm monorepo containing the library source, a documentation site (Astro/Starlight), and runnable example projects. The library is published as a single npm package (`openapi-mocks`) with a single entry point. The `createMockClient` factory exposes both `.data()` and `.handlers()` on the same client object. MSW is lazily loaded only when `.handlers()` is called — consumers who only need raw mock data never touch MSW.
+
+**Reference documents:**
+- `planning/PROJECT_OVERVIEW.md` — technical design, public API, configuration options, and v1 scope.
+- `planning/DOCS_PLAN.md` — documentation site architecture, hosting, and page content plan.
+- `planning/mock-data-example.ts` — canonical example of the core data generation API.
+- `planning/playwright-example.ts` — canonical example of the MSW/Playwright API.
+
+The example code files (`mock-data-example.ts`, `playwright-example.ts`) and `PROJECT_OVERVIEW.md` are aligned and together represent the **canonical** public API shape.
+
+## Goals
+
+- Publish a working `openapi-mocks` package to npm with core data generation and MSW handler generation from a single entry point.
+- Support OpenAPI 3.0.x and 3.1.x documents provided as a URL, file path, JSON string, or plain JS object.
+- Generate realistic mock data using Faker.js with a layered resolution strategy: consumer overrides → spec examples/defaults → `x-faker-method` → smart defaults → type-based fallback.
+- Generate ready-to-use MSW v2 `http.*` handlers that return spec-compliant JSON responses.
+- Provide a `createMockClient` factory that parses a spec once and exposes `.data()` and `.handlers()` methods, plus a standalone `generateFromSchema` utility for ad-hoc use.
+- Ship a documentation site built with Astro/Starlight, including hand-written guides and auto-generated API reference via `starlight-typedoc`.
+- Include self-contained example projects (Playwright E2E, standalone mock server) in the monorepo.
+- Achieve high test coverage, especially at the unit level for schema-walking and data generation.
+
+## User Stories
+
+Stories are grouped into phases matching the delivery priority: **Phase 1** (core data generation), **Phase 2** (MSW handlers), **Phase 3** (examples), **Phase 4** (docs site). Within each phase, stories are ordered by dependency — earlier stories are prerequisites for later ones.
+
+---
+
+### Phase 1: Monorepo & Core Data Generation
+
+---
+
+### US-001: Initialize pnpm monorepo structure
+**Description:** As a developer, I need the monorepo scaffolded with pnpm workspaces so that all packages can be developed, built, and tested together.
+
+**Acceptance Criteria:**
+- [ ] Root `package.json` with `"packageManager": "pnpm@..."` field and `pnpm-workspace.yaml` listing `packages/*`, `docs`, and `examples/*`
+- [ ] Root `tsconfig.json` with `strict: true`, used as a base for all workspace members
+- [ ] Root `.gitignore` covering `node_modules`, `dist`, `.turbo`, `.astro`, and OS artifacts
+- [ ] Root `.npmrc` with `shamefully-hoist=false` (strict hoisting)
+- [ ] Empty placeholder `packages/openapi-mocks/package.json` with `name: "openapi-mocks"`, `type: "module"`, `private: false`
+- [ ] Empty placeholder `docs/package.json` with `private: true`
+- [ ] `pnpm install` succeeds from root with no errors
+- [ ] Typecheck passes at root level
+
+---
+
+### US-002: Configure Vite library build for openapi-mocks
+**Description:** As a developer, I need the library package to build with Vite in library mode so that it produces consumable ESM and CJS bundles.
+
+**Acceptance Criteria:**
+- [ ] `packages/openapi-mocks/vite.config.ts` configured with `build.lib` targeting the package entry points
+- [ ] Build produces ESM (`.js`) output in `dist/`; also produces CJS (`.cjs`) output if Vite's library mode supports it cleanly — otherwise ESM-only is acceptable
+- [ ] TypeScript declarations (`.d.ts`) are generated alongside the JS output (via `vite-plugin-dts` or `tsc --emitDeclarationOnly`)
+- [ ] `package.json` has `exports` map with `"."` pointing to the single entry point (with `import`, `require` if CJS is included, and `types` conditions). There is no `"./msw"` subpath — MSW is lazily loaded at call time when `.handlers()` is invoked.
+- [ ] `pnpm build` in the package directory succeeds and produces the expected files
+- [ ] Typecheck passes
+
+---
+
+### US-003: Configure Vitest for the library package
+**Description:** As a developer, I need Vitest configured so I can write and run tests for the library.
+
+**Acceptance Criteria:**
+- [ ] `packages/openapi-mocks/vitest.config.ts` (or merged into `vite.config.ts`) with TypeScript support enabled
+- [ ] A trivial placeholder test file (`src/__tests__/smoke.test.ts`) that asserts `true === true` and passes
+- [ ] `pnpm test` in the package directory runs Vitest and exits cleanly
+- [ ] `pnpm test` at the root (via a root script or `pnpm -r test`) also works
+- [ ] Typecheck passes
+
+---
+
+### US-004: Implement OpenAPI spec input parsing and resolution
+**Description:** As a developer, I need a module that accepts any of the four supported spec input forms (URL, file path, JSON string, plain object), parses and resolves all `$ref` pointers, and returns a fully dereferenced OpenAPI document.
+
+**Acceptance Criteria:**
+- [ ] `@apidevtools/swagger-parser` and `openapi-types` installed as direct dependencies
+- [ ] Internal module (e.g. `src/parser.ts`) exports an async function like `resolveSpec(input: SpecInput): Promise<OpenAPIV3.Document | OpenAPIV3_1.Document>`
+- [ ] `SpecInput` type is defined as `string | OpenAPIV3.Document | OpenAPIV3_1.Document | Record<string, unknown>`
+- [ ] String inputs starting with `http://` or `https://` are treated as URLs
+- [ ] String inputs that look like JSON (start with `{`) are parsed with `JSON.parse` before passing to Swagger Parser
+- [ ] Other string inputs are treated as file paths
+- [ ] Object inputs are passed directly to Swagger Parser's `dereference` method
+- [ ] All `$ref` pointers in the returned document are fully resolved (no `$ref` nodes remain)
+- [ ] Throws a descriptive error if the input is not a valid OpenAPI 3.x document
+- [ ] Unit tests cover all four input forms (use a minimal inline spec object for the URL/path tests, mocking file I/O and HTTP as needed)
+- [ ] Typecheck passes
+
+---
+
+### US-005: Implement type-based fallback data generation
+**Description:** As a developer, I need a module that generates a value for any OpenAPI schema based on its `type` and `format` fields, using Faker.js.
+
+**Acceptance Criteria:**
+- [ ] `@faker-js/faker` installed as a direct dependency
+- [ ] Internal module (e.g. `src/generators/type-fallback.ts`) exports a function that accepts a schema object and a Faker instance, and returns a generated value
+- [ ] Handles all OpenAPI types: `string`, `number`, `integer`, `boolean`, `array`, `object`
+- [ ] Handles common string formats: `date-time` → ISO date string, `date` → date string, `email` → email, `uri` / `url` → URL, `uuid` → UUID, `hostname` → hostname, `ipv4` → IPv4, `ipv6` → IPv6, `byte` → base64 string
+- [ ] `number` respects `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, and `multipleOf` constraints
+- [ ] `integer` respects `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, and `multipleOf` constraints; generates within `int32` range by default, full `int64` range when `format: "int64"`
+- [ ] `string` respects `minLength`, `maxLength`, and `pattern` (best-effort; pattern support can use `faker.helpers.fromRegExp` or fall back to a plain string with a logged warning)
+- [ ] `boolean` returns `true` or `false` randomly (seeded)
+- [ ] `enum` values: if schema has `enum`, picks one randomly (seeded)
+- [ ] Unit tests for each type and each string format
+- [ ] Typecheck passes
+
+---
+
+### US-006: Implement smart-default property name mapping
+**Description:** As a developer, I need a curated mapping of common property names to Faker methods, so that generated data is realistic without requiring `x-faker-method` on every field.
+
+**Acceptance Criteria:**
+- [ ] Internal module (e.g. `src/generators/smart-defaults.ts`) exports a lookup structure (Map or plain object) mapping property name strings to Faker dot-paths
+- [ ] At least 30 mappings covering common names. Examples: `firstName` / `first_name` → `person.firstName`, `lastName` / `last_name` → `person.lastName`, `email` → `internet.email`, `phone` / `phoneNumber` / `phone_number` → `phone.number`, `avatar` / `avatarUrl` / `avatar_url` → `image.avatar`, `username` / `userName` / `user_name` → `internet.username`, `url` / `website` → `internet.url`, `address` / `streetAddress` / `street_address` → `location.streetAddress`, `city` → `location.city`, `state` → `location.state`, `zip` / `zipCode` / `zip_code` / `postalCode` / `postal_code` → `location.zipCode`, `country` → `location.country`, `latitude` / `lat` → `location.latitude`, `longitude` / `lng` / `lon` → `location.longitude`, `title` → `lorem.sentence`, `description` / `summary` / `bio` → `lorem.paragraph`, `name` / `fullName` / `full_name` → `person.fullName`, `company` / `companyName` / `company_name` → `company.name`, `createdAt` / `created_at` → `date.past`, `updatedAt` / `updated_at` → `date.recent`, `id` → `string.uuid`, `slug` → `lorem.slug`, `color` → `color.rgb`, `price` / `amount` → `commerce.price`, `currency` → `finance.currencyCode`, `imageUrl` / `image_url` / `image` / `photo` → `image.url`
+- [ ] Export a function like `getSmartDefault(propertyName: string): string | undefined` that returns the Faker dot-path or `undefined` if no match
+- [ ] Matching is case-insensitive and supports both camelCase and snake_case variants
+- [ ] Smart default is skipped if the schema's `type` conflicts with the Faker method's output type (e.g. property named `email` with `type: integer` should NOT use `internet.email`). The function accepts the schema type so it can do this check.
+- [ ] Unit tests covering: exact match, case-insensitive match, snake_case match, type-conflict skip, unknown name returns `undefined`
+- [ ] Typecheck passes
+
+---
+
+### US-007: Implement x-faker-method extension support
+**Description:** As a developer, I need to resolve the `x-faker-method` custom extension on schema objects to specific Faker method calls.
+
+**Acceptance Criteria:**
+- [ ] The `openapi-types` schema interfaces are extended (via declaration merging or a local extended type) to include an optional `x-faker-method?: string` field
+- [ ] Internal function (e.g. in `src/generators/faker-extension.ts`) accepts a Faker instance and a dot-path string (e.g. `"internet.email"`, `"image.avatar"`, `"lorem.paragraphs"`) and calls the corresponding Faker method
+- [ ] Supports any valid Faker dot-path (at least two levels deep, e.g. `module.method`)
+- [ ] Throws a descriptive error if the dot-path does not resolve to a callable function on the Faker instance (e.g. `"nonexistent.method"` → error naming the invalid path)
+- [ ] Unit tests: valid dot-path returns a value, invalid dot-path throws with a helpful message, method with no arguments works, nested path works
+- [ ] Typecheck passes
+
+---
+
+### US-008: Implement schema walker with generation priority chain
+**Description:** As a developer, I need the core schema-walking engine that traverses an OpenAPI schema object, applies the resolution priority chain (overrides → examples → x-faker-method → smart defaults → type fallback), and returns a generated value.
+
+**Acceptance Criteria:**
+- [ ] Internal module (e.g. `src/generators/schema-walker.ts`) exports an async function like `generateValueForSchema(schema, options): unknown`
+- [ ] Options include: `overrides`, `fakerOnly` (called `ignoreExamples` in canonical examples), `seed`, `propertyName` (for smart-default lookup), and a Faker instance
+- [ ] Priority chain is: (1) if an override exists for this path, use it; (2) if `ignoreExamples` is false and the schema has `example` or `default`, use it; (3) if `x-faker-method` is present, call it; (4) if property name matches a smart default and type doesn't conflict, use it; (5) fall back to type-based generation
+- [ ] For `type: "object"`: iterate over `properties`, recursively generate each, respect `required` array (optional properties may be randomly omitted)
+- [ ] For `type: "array"`: generate `items` repeatedly; default length is random between 0–5 (seeded); respects `minItems` and `maxItems` constraints
+- [ ] Handles schemas with no `type` field (infer from `properties` → object, `items` → array, etc.)
+- [ ] Returns `null` for nullable schemas with random probability (seeded)
+- [ ] Unit tests: each priority level wins over lower ones, object generation, array generation, nullable handling, optional field omission
+- [ ] Typecheck passes
+
+---
+
+### US-009: Implement allOf composition
+**Description:** As a developer, I need `allOf` schemas to be deep-merged and then generated as a single unified object.
+
+**Acceptance Criteria:**
+- [ ] When the schema walker encounters `allOf`, it deep-merges all sub-schemas into one combined schema before generating
+- [ ] Deep merge handles: combining `properties` from multiple sub-schemas, merging `required` arrays (union), and combining `type` if present on multiple sub-schemas (must be compatible or error)
+- [ ] If sub-schemas have conflicting `type` values, throw a descriptive error
+- [ ] Unit tests: two object schemas merged, required arrays unioned, property from each sub-schema present in output, conflicting types throw
+- [ ] Typecheck passes
+
+---
+
+### US-010: Implement oneOf composition with discriminator support
+**Description:** As a developer, I need `oneOf` schemas to select one sub-schema, using the discriminator if present, and generate data for it.
+
+**Acceptance Criteria:**
+- [ ] When the schema walker encounters `oneOf` without a `discriminator`, it randomly selects one sub-schema (seeded) and generates data for it
+- [ ] When `oneOf` has a `discriminator` with `propertyName` and `mapping`, it selects the sub-schema indicated by the mapping and sets the discriminator property to the correct value in the output
+- [ ] If `discriminator` has `propertyName` but no `mapping`, the sub-schema is selected randomly (seeded) and the discriminator property is set to match the selected schema's enum/const value if present
+- [ ] Unit tests: random selection without discriminator, deterministic selection with discriminator mapping, discriminator property value correct in output
+- [ ] Typecheck passes
+
+---
+
+### US-011: Implement anyOf composition
+**Description:** As a developer, I need `anyOf` schemas to select one or more sub-schemas, merge them, and generate data.
+
+**Acceptance Criteria:**
+- [ ] When the schema walker encounters `anyOf`, it randomly selects one or more sub-schemas (seeded), merges them (same logic as `allOf`), and generates data
+- [ ] At least one sub-schema is always selected
+- [ ] Unit tests: single sub-schema selected, multiple sub-schemas merged, all properties from selected sub-schemas present in output
+- [ ] Typecheck passes
+
+---
+
+### US-012: Implement OpenAPI 3.0.x vs 3.1.x compatibility handling
+**Description:** As a developer, I need the schema walker to handle differences between OpenAPI 3.0.x and 3.1.x so both versions work correctly.
+
+**Acceptance Criteria:**
+- [ ] `nullable: true` in 3.0.x schemas is treated equivalently to `type: ["string", "null"]` (or whatever the base type is) in 3.1.x
+- [ ] `type` as an array (3.1.x, e.g. `type: ["string", "null"]`) is handled: the non-null type is used for generation, and the value may be `null` with random probability (seeded)
+- [ ] `$ref` siblings in 3.1.x (keywords alongside `$ref`) are respected — though Swagger Parser should resolve these, the walker doesn't discard sibling keywords
+- [ ] Unit tests: 3.0.x nullable schema, 3.1.x array-type nullable schema, both produce correct nullable behavior
+- [ ] Typecheck passes
+
+---
+
+### US-013: Implement circular reference handling with maxDepth
+**Description:** As a developer, I need the schema walker to detect circular/self-referential schemas and stop recursion at a configurable depth.
+
+**Acceptance Criteria:**
+- [ ] The walker tracks the current recursion path (stack of schema identifiers or pointers)
+- [ ] When a circular reference is detected and `maxDepth` (default: 3) is reached: optional or nullable fields receive `null` or are omitted; required non-nullable fields receive a minimal stub object with only required primitive fields populated one level past the limit
+- [ ] If a valid stub cannot be constructed (required non-nullable field whose type is the circular type with no primitive fields), the library throws with an error naming the circular path
+- [ ] `maxDepth` is configurable via options
+- [ ] Unit tests: self-referential schema stops at depth 3, optional circular field omitted, required circular field gets stub, impossible circular reference throws with path info, custom maxDepth respected
+- [ ] Typecheck passes
+
+---
+
+### US-014: Implement optional field random omission
+**Description:** As a developer, I need optional properties to be randomly included or omitted (seeded) so generated data surfaces missing-field bugs.
+
+**Acceptance Criteria:**
+- [ ] Properties NOT in the schema's `required` array are included or omitted with roughly 50/50 probability (seeded)
+- [ ] When a `seed` is provided, the same set of optional fields is always included/omitted for the same schema
+- [ ] When no seed is provided, omission is random each run
+- [ ] The `overrides` mechanism (US-008) can force a specific optional field to always be present by providing a value for it
+- [ ] Unit tests: with a seed, same fields are included across runs; without a seed, fields vary (statistical test or mock); override forces inclusion
+- [ ] Typecheck passes
+
+---
+
+### US-015: Implement generateFromSchema public function
+**Description:** As a library consumer, I want a `generateFromSchema` function for ad-hoc mocking of a single schema object without needing a full OpenAPI document.
+
+**Acceptance Criteria:**
+- [ ] Exported from the main entry point (`openapi-mocks`)
+- [ ] Signature: `generateFromSchema(schema: OpenAPISchemaObject, options?: GenerateFromSchemaOptions): unknown`
+- [ ] Options include at minimum: `seed`, `ignoreExamples` (maps to internal `fakerOnly`)
+- [ ] Uses the full resolution priority chain from US-008
+- [ ] Handles all schema types, composition keywords, nullable, and circular references
+- [ ] Unit tests covering the examples from `mock-data-example.ts`: basic object, oneOf with discriminator, array with constraints, nullable and optional fields
+- [ ] Typecheck passes
+
+---
+
+### US-016: Implement createMockClient factory and .data() method
+**Description:** As a library consumer, I want a `createMockClient` function that parses my spec once and gives me a `.data()` method to generate mock data without re-parsing.
+
+**Acceptance Criteria:**
+- [ ] Exported from the main entry point (`openapi-mocks`)
+- [ ] Signature: `createMockClient(spec: SpecInput, options?: GlobalOptions): MockClient`
+- [ ] `MockClient` is an object (not a class) with at least a `.data()` method
+- [ ] `.data()` accepts per-call options and returns `Promise<Map<string, Map<number, unknown>>>` keyed by operation ID then status code
+- [ ] Global options supported: `seed`, `ignoreExamples`
+- [ ] Per-call `.data()` options supported: `operations` (an object keyed by operation ID, each with optional `arrayLengths`, `transform`, `statusCode`), `statusCodes` (array of status codes to include)
+- [ ] `operations` acts as a filter: when provided, only the listed operation IDs are generated
+- [ ] When `operations` is omitted, all operations in the spec are generated
+- [ ] Default status code behavior: return the lowest 2xx response defined for each operation
+- [ ] `statusCodes` option allows requesting additional status codes (e.g. `[200, 422]`)
+- [ ] `transform` callback per operation receives generated data and returns a new object (the canonical examples show `(data) => ({ ...data, name: "Jane Doe" })`)
+- [ ] `arrayLengths` per operation controls array sizes; value is a tuple `[min, max]` keyed by dot-path property name (e.g. `{ users: [5, 5] }` pins to exactly 5)
+- [ ] Unit tests covering the scenarios from `mock-data-example.ts`: all-operations generation, scoped operations, multiple status codes, transforms, ignoreExamples
+- [ ] Typecheck passes
+
+---
+
+### US-017: Implement array length control via arrayLengths option
+**Description:** As a library consumer, I want to control the number of items generated for array schemas using the `arrayLengths` option.
+
+**Acceptance Criteria:**
+- [ ] `arrayLengths` accepts an object where keys are dot-notation paths (e.g. `"users"`, `"users[*].addresses"`) and values are `[min, max]` tuples
+- [ ] When a tuple has equal values (e.g. `[3, 3]`), exactly that many items are generated
+- [ ] When min < max (e.g. `[1, 3]`), a random count within the range is generated (seeded)
+- [ ] Schema-level `minItems` and `maxItems` constraints are respected: the effective range is the intersection of the `arrayLengths` tuple and the schema constraints
+- [ ] When no `arrayLengths` is specified and no schema constraints exist, arrays default to a random length between 0–5 (seeded)
+- [ ] Wildcard bracket notation `[*]` in the path targets arrays nested within each element (as shown in the Playwright example: `"users[*].addresses": [1, 1]`)
+- [ ] Unit tests: exact length, range, schema constraint intersection, default length, nested wildcard path
+- [ ] Typecheck passes
+
+---
+
+### US-018: Implement overrides / consumer value injection
+**Description:** As a library consumer, I want to pass explicit values that override generated data at specific paths.
+
+**Acceptance Criteria:**
+- [ ] The `overrides` option accepts an object with dot-notation keys (e.g. `"user.name"`, `"users.0.email"`) and arbitrary values
+- [ ] Overrides are applied after data generation via a deep-set utility (lodash `set` or similar)
+- [ ] Overrides at the top level of an operation's response replace the generated value for that path
+- [ ] Explicit `null` as an override value sets the field to `null`
+- [ ] Unit tests: top-level override, nested override, array index override, null override
+- [ ] Typecheck passes
+
+---
+
+### US-019: Implement echoPathParams option
+**Description:** As a library consumer, I want path parameters from the request URL to be echoed into matching response fields automatically.
+
+**Acceptance Criteria:**
+- [ ] When `echoPathParams: true` is set, the library inspects the operation's path parameters (e.g. `{userId}` from `/users/{userId}`)
+- [ ] For each path parameter, if the response schema has a property with the same name (or a common variant like `userId` for `user_id`), the generated value for that property is replaced with the parameter value
+- [ ] In the context of `.data()`, path param values are not available (no request), so `echoPathParams` is only meaningful for `.handlers()` (MSW layer). The `.data()` method ignores this option silently.
+- [ ] This story covers the core logic for matching param names to response fields; the MSW integration story (US-021) wires it into actual request handling
+- [ ] Unit tests: param name matches response field, value is replaced; no match means no change; camelCase/snake_case variants matched
+- [ ] Typecheck passes
+
+---
+
+---
+
+### Phase 2: MSW Handler Generation
+
+---
+
+### US-020: Implement createMockClient .handlers() method (MSW handler generation)
+**Description:** As a library consumer, I want the same `createMockClient` from `openapi-mocks` to expose a `.handlers()` method that returns MSW v2 handler objects, with MSW lazily loaded at call time.
+
+**Acceptance Criteria:**
+- [ ] `.handlers()` is a method on the same `MockClient` object returned by `createMockClient` (exported from `openapi-mocks` — no separate subpath export)
+- [ ] `.handlers()` returns `Promise<HttpHandler[]>` (MSW v2 `http.get`, `http.post`, etc.)
+- [ ] MSW (`msw`) is a peer dependency and is lazily loaded via dynamic `import("msw")` inside `.handlers()` — consumers who only use `.data()` or `generateFromSchema` never need MSW installed
+- [ ] If MSW is not installed when `.handlers()` is called, the library throws a descriptive error at call time directing the consumer to install `msw` (e.g. `"openapi-mocks: .handlers() requires msw. Install it with: npm install msw"`)
+- [ ] Each handler corresponds to one operation in the spec (or filtered subset via `operations`)
+- [ ] The HTTP method and URL path are derived from the operation's method and path in the spec, prefixed by `baseUrl`
+- [ ] Each handler's resolver calls the core data generation pipeline and returns a JSON response with the generated body, correct status code, and `Content-Type: application/json`
+- [ ] `baseUrl` global option is prepended to every handler's URL pattern (e.g. `baseUrl: "https://api.acme.dev/v1"` + path `/users` → handler matches `https://api.acme.dev/v1/users`)
+- [ ] Per-operation options supported: `statusCode`, `transform`, `arrayLengths` (same as `.data()`)
+- [ ] Global options supported: `seed`, `baseUrl`, `echoPathParams`, `ignoreExamples`, `statusCodes`
+- [ ] Unit tests: generates correct number of handlers, handler URL matches spec path with baseUrl, handler responds with JSON, status code matches, per-operation statusCode override works, calling `.handlers()` without MSW installed throws a helpful error
+- [ ] Typecheck passes
+
+---
+
+### US-021: Wire echoPathParams into MSW handlers
+**Description:** As a library consumer, I want MSW handlers to automatically echo path parameters from the intercepted request into the response body when `echoPathParams: true`.
+
+**Acceptance Criteria:**
+- [ ] When `echoPathParams: true` is set, the MSW handler resolver extracts path parameters from the intercepted request (MSW provides these in `request.params`)
+- [ ] The path param values are passed to the echo logic from US-019, which patches the generated response data before it's returned
+- [ ] Works for string-typed path params; numeric path params are coerced to strings in the response unless the response schema type is `integer` or `number`, in which case they're parsed to a number
+- [ ] Unit tests (integration-level): handler for `GET /users/:userId` with `echoPathParams: true` returns a response where `userId` matches the request's path param value
+- [ ] Typecheck passes
+
+---
+
+### US-022: Implement per-operation responseTransform with request access in MSW handlers
+**Description:** As a library consumer, I want per-operation transform callbacks in `.handlers()` to receive both the generated data and the intercepted MSW request, so I can implement request-aware logic like pagination.
+
+**Acceptance Criteria:**
+- [ ] The `transform` callback for `.handlers()` has signature `(data: Record<string, unknown>, request: Request) => Record<string, unknown>` (the MSW `Request` object)
+- [ ] The callback receives a copy of the generated data (not a reference to the internal object)
+- [ ] The returned object replaces the response body entirely
+- [ ] If the callback returns `undefined`, the original generated data is used
+- [ ] The request object provides access to URL, query params, headers, and body — enabling pagination, filtering, and similar patterns
+- [ ] Unit tests covering the pagination example from `playwright-example.ts`: transform reads `cursor` query param and sets `page`, `nextPage`, `totalPages` accordingly
+- [ ] Typecheck passes
+
+---
+
+### US-023: Handle non-JSON content types gracefully
+**Description:** As a library consumer, I want the library to skip operations that only have non-JSON response content types and emit a console warning, rather than throwing.
+
+**Acceptance Criteria:**
+- [ ] When iterating operations, if an operation's response has no `application/json` content type, it is skipped (no handler/data generated)
+- [ ] A `console.warn` is emitted naming the operation ID and the content types that were found
+- [ ] Operations with both `application/json` and non-JSON content types still generate for the JSON variant
+- [ ] The library does NOT throw for non-JSON-only operations
+- [ ] Unit tests: non-JSON-only operation is skipped and warning emitted (spy on `console.warn`), mixed-content-type operation generates JSON variant
+- [ ] Typecheck passes
+
+---
+
+### US-024: Implement default status code selection logic
+**Description:** As a developer, I need the library to select the correct default response status code for each operation.
+
+**Acceptance Criteria:**
+- [ ] When no `statusCode` per-operation override and no global `statusCodes` filter is set, the handler returns the lowest 2xx status code defined for the operation (e.g. if `200` and `201` are defined, use `200`)
+- [ ] If no 2xx response is defined for an operation, the operation is skipped with a console warning
+- [ ] Per-operation `statusCode` override selects a specific status code (e.g. `422`)
+- [ ] Global `statusCodes` filter generates responses for all matching codes (e.g. `[200, 422]` generates both)
+- [ ] Unit tests: default picks lowest 2xx, override picks specific code, global filter picks multiple codes, no 2xx skips with warning
+- [ ] Typecheck passes
+
+---
+
+### US-025: Integration tests against real-world OpenAPI specs
+**Description:** As a developer, I need integration tests that run the full generation pipeline against well-known OpenAPI specs to catch real-world edge cases.
+
+**Acceptance Criteria:**
+- [ ] At least 2 real-world specs are used: Petstore (the canonical OpenAPI example) and one larger spec (e.g. a subset of Stripe or GitHub)
+- [ ] Specs are committed as fixture files in `packages/openapi-mocks/src/__tests__/fixtures/`
+- [ ] Tests run `createMockClient(spec).data()` and assert: no errors thrown, all operations produce output, output types match expected shapes (at least spot-check a few operations)
+- [ ] Tests run `createMockClient(spec).handlers()` and assert: correct number of handlers generated, handler URLs match spec paths
+- [ ] Seed-based snapshot tests: with a fixed seed, the generated output matches a committed snapshot (catches regressions in data generation)
+- [ ] Typecheck passes
+
+---
+
+### US-026: Implement error handling for broken specs
+**Description:** As a developer, I need the library to throw clear, descriptive errors when it encounters problems in the spec.
+
+**Acceptance Criteria:**
+- [ ] Broken `$ref` pointers throw with an error message naming the broken ref path
+- [ ] Invalid `x-faker-method` dot-paths throw with an error message naming the invalid path and the schema location
+- [ ] Unsupported schema constructs (if any exist beyond v1 scope) throw with a descriptive message
+- [ ] All thrown errors are instances of a custom `OpenApiMocksError` class (or similar) that extends `Error`, so consumers can catch them specifically
+- [ ] Unit tests for each error case: broken ref, invalid faker method, custom error class
+- [ ] Typecheck passes
+
+---
+
+### US-027: Configure semantic-release for npm publishing
+**Description:** As a maintainer, I need automated versioning and npm publishing via semantic-release so that releases are hands-off.
+
+**Acceptance Criteria:**
+- [ ] `semantic-release` installed as a dev dependency at the root
+- [ ] `.releaserc` (or `release.config.js`) configured with: `@semantic-release/commit-analyzer`, `@semantic-release/release-notes-generator`, `@semantic-release/changelog`, `@semantic-release/npm` (pointed at `packages/openapi-mocks`), `@semantic-release/git`, `@semantic-release/github`
+- [ ] The npm plugin is configured to publish from `packages/openapi-mocks/dist` (or wherever the build output lives)
+- [ ] A root script `pnpm release` runs semantic-release (for local testing / CI)
+- [ ] `packages/openapi-mocks/package.json` has `"publishConfig": { "access": "public" }`
+- [ ] Typecheck passes
+
+---
+
+### US-028: Add TypeScript public API barrel exports and type definitions
+**Description:** As a library consumer, I need clean, well-typed exports from the package's single entry point.
+
+**Acceptance Criteria:**
+- [ ] `packages/openapi-mocks/src/index.ts` exports: `createMockClient`, `generateFromSchema`, and all public option/result types (`GlobalOptions`, `MockClient`, `GenerateFromSchemaOptions`, etc.)
+- [ ] There is no separate `src/msw.ts` entry point — the `.handlers()` method lives on the `MockClient` object and lazily imports MSW at call time
+- [ ] All exported types have TSDoc comments describing their purpose and fields
+- [ ] No internal implementation types are exported
+- [ ] A consumer can `import { createMockClient, generateFromSchema } from "openapi-mocks"` and get correct types with no `any` leaks
+- [ ] The MSW-related types (e.g. the `transform` callback signature that includes `Request`) are exported from the same entry point but do not require MSW to be installed for type-checking purposes (MSW types are imported with `import type`)
+- [ ] Typecheck passes
+
+---
+
+---
+
+### Phase 3: Example Projects
+
+---
+
+### US-029: Create Playwright E2E example project
+**Description:** As a prospective user browsing the repo, I want a self-contained Playwright example project that demonstrates using `openapi-mocks` for E2E testing with MSW.
+
+**Acceptance Criteria:**
+- [ ] Directory: `examples/playwright/` with its own `package.json` (not a workspace member, fully self-contained)
+- [ ] Includes a minimal OpenAPI spec file (`specs/acme-api.yaml`) with at least `listUsers`, `getUser`, and `createUser` operations
+- [ ] Includes a minimal test app (a static HTML page or tiny framework app) that fetches from the mocked API and renders results
+- [ ] Includes a Playwright config and at least 2 test files demonstrating: happy-path list rendering with fixed array lengths, path-param echoing, per-operation transform, and error response (422)
+- [ ] Follows the patterns from `playwright-example.ts` (canonical API usage)
+- [ ] Has a `README.md` explaining how to install, run, and understand the example
+- [ ] `pnpm install && pnpm test` in the example directory succeeds (installs `openapi-mocks` from the local workspace or npm)
+- [ ] Typecheck passes
+
+---
+
+### US-030: Create standalone mock server example project
+**Description:** As a prospective user, I want a self-contained example that uses `openapi-mocks` (core, no MSW) to build a simple HTTP mock server.
+
+**Acceptance Criteria:**
+- [ ] Directory: `examples/mock-server/` with its own `package.json`
+- [ ] Uses a lightweight HTTP framework (Hono or Express) as a dependency
+- [ ] Includes a minimal OpenAPI spec file
+- [ ] Server script iterates over the spec's paths and operations, calls `createMockClient.data()` for each, and registers corresponding HTTP routes
+- [ ] Demonstrates: basic route registration, path parameter handling, hitting the server with `curl` examples in the README
+- [ ] Has a `README.md` explaining the use case, how to run, and caveats (no statefulness, no request validation)
+- [ ] `pnpm install && pnpm start` in the example directory starts the server
+- [ ] Typecheck passes
+
+---
+
+---
+
+### Phase 4: Documentation Site
+
+---
+
+### US-031: Scaffold Astro/Starlight docs site
+**Description:** As a developer, I need the docs site initialized with Astro and Starlight so content pages can be added.
+
+**Acceptance Criteria:**
+- [ ] `docs/` directory is a pnpm workspace member
+- [ ] `docs/package.json` has `astro` and `@astrojs/starlight` as dependencies
+- [ ] `docs/astro.config.mjs` configures Starlight with: site title ("openapi-mocks"), sidebar navigation (empty/placeholder groups for Guides, Examples, API Reference), dark mode enabled
+- [ ] A placeholder `docs/src/content/docs/index.mdx` landing page exists and renders
+- [ ] `pnpm dev` in `docs/` starts the Astro dev server and the site loads in a browser
+- [ ] `pnpm build` in `docs/` produces a static build in `docs/dist/`
+- [ ] Typecheck passes
+
+---
+
+### US-032: Configure starlight-typedoc for API reference generation
+**Description:** As a developer, I need the docs site to auto-generate API reference pages from the library's TypeScript source.
+
+**Acceptance Criteria:**
+- [ ] `starlight-typedoc` and `typedoc` installed as dev dependencies in `docs/`
+- [ ] `astro.config.mjs` configures the `starlight-typedoc` plugin pointing at `../packages/openapi-mocks/src/index.ts` as the entry point
+- [ ] On `pnpm build`, TypeDoc generates Markdown pages for all public exports into the Starlight content directory
+- [ ] Generated pages appear under the `/reference/` path in the built site
+- [ ] Sidebar includes an "API Reference" group with the generated pages
+- [ ] Typecheck passes
+
+---
+
+### US-033: Write landing page / quick start content
+**Description:** As a docs reader, I want the landing page to get me from zero to working mock handlers in under two minutes.
+
+**Acceptance Criteria:**
+- [ ] `docs/src/content/docs/index.mdx` contains: hero with one-line description, tabbed install blocks (npm/pnpm/yarn/bun), brief prose covering the three use cases (tests, Storybook, local dev), two code examples (mock data only, MSW handlers), and "Next steps" links to examples and guides
+- [ ] Code examples are syntactically correct and match the canonical API from the example files
+- [ ] Page renders correctly in the Starlight layout (headings, code blocks, tabs)
+- [ ] Typecheck passes
+
+---
+
+### US-034: Write Playwright E2E example documentation page
+**Description:** As a docs reader, I want a guide page walking through the Playwright E2E example.
+
+**Acceptance Criteria:**
+- [ ] `docs/src/content/docs/examples/playwright.md` (or `.mdx`)
+- [ ] Content covers: problem statement, project setup, generating handlers, wiring into Playwright, a complete test file, per-test overrides, seeding for snapshots
+- [ ] References the `examples/playwright/` directory for the full runnable code
+- [ ] Code snippets match the canonical `playwright-example.ts` patterns
+- [ ] Typecheck passes
+
+---
+
+### US-035: Write standalone mock server example documentation page
+**Description:** As a docs reader, I want a guide page walking through the mock server example.
+
+**Acceptance Criteria:**
+- [ ] `docs/src/content/docs/examples/mock-server.md` (or `.mdx`)
+- [ ] Content covers: use case, project setup, iterating over spec paths, calling `createMockClient.data()`, registering routes, path parameter handling, running with `curl`
+- [ ] References the `examples/mock-server/` directory for the full runnable code
+- [ ] Notes limitations (no statefulness, no request validation)
+- [ ] Typecheck passes
+
+---
+
+### US-036: Write Configuration guide page
+**Description:** As a docs reader, I want a reference page covering every global and per-operation option.
+
+**Acceptance Criteria:**
+- [ ] `docs/src/content/docs/guides/configuration.md`
+- [ ] For each option (`seed`, `baseUrl`, `ignoreExamples`, `statusCodes`, `operations`, `arrayLengths`, `overrides`, `echoPathParams`, `maxDepth`, per-operation `statusCode`, `transform`): type signature, default value, description, and a short code example
+- [ ] Organized with clear headings: Global Options, Per-Operation Options
+- [ ] Typecheck passes
+
+---
+
+### US-037: Write Composition guide page
+**Description:** As a docs reader, I want a guide explaining how `allOf`, `oneOf`, and `anyOf` are handled.
+
+**Acceptance Criteria:**
+- [ ] `docs/src/content/docs/guides/composition.md`
+- [ ] Covers each keyword with: behavior description, a schema snippet, and the generated output
+- [ ] Includes discriminator support explanation with example
+- [ ] Notes OpenAPI 3.0.x vs 3.1.x differences (`nullable` vs `type: ["string", "null"]`)
+- [ ] Typecheck passes
+
+---
+
+### US-038: Write Faker Extensions guide page
+**Description:** As a docs reader, I want a guide on using `x-faker-method` in my OpenAPI spec.
+
+**Acceptance Criteria:**
+- [ ] `docs/src/content/docs/guides/faker-extensions.md`
+- [ ] Explains what `x-faker-method` is and when to use it
+- [ ] Includes a table of example Faker dot-paths (`internet.email`, `image.avatar`, `lorem.paragraphs`, `location.city`, etc.)
+- [ ] Walkthrough: adding the extension to an existing spec property and seeing the result
+- [ ] Typecheck passes
+
+---
+
+### US-039: Write Smart Defaults guide page
+**Description:** As a docs reader, I want to see the full curated mapping table so I know which property names get realistic data automatically.
+
+**Acceptance Criteria:**
+- [ ] `docs/src/content/docs/guides/smart-defaults.md`
+- [ ] Contains the full mapping table (property name → Faker method) from US-006
+- [ ] Explains the type-conflict skip behavior
+- [ ] Advises when to use `x-faker-method` instead
+- [ ] Typecheck passes
+
+---
+
+### US-040: Implement Markdown content negotiation (.md URL variant)
+**Description:** As a programmatic consumer (LLM, CLI tool), I want to append `.md` to any doc URL and get the raw Markdown source.
+
+**Acceptance Criteria:**
+- [ ] A Cloudflare Pages Function (or Astro server endpoint) handles requests ending in `.md`
+- [ ] It strips the `.md` suffix, resolves the corresponding Markdown source file from `src/content/docs/`, and returns it with `Content-Type: text/markdown; charset=utf-8`
+- [ ] Works for both hand-written docs and TypeDoc-generated pages
+- [ ] Every rendered page includes a visible "View as Markdown" link pointing to the `.md` variant
+- [ ] The link is implemented as a Starlight component override injected via Starlight's `components` config
+- [ ] Typecheck passes
+
+---
+
+## Functional Requirements
+
+- FR-1: The library must parse OpenAPI 3.0.x and 3.1.x documents provided as a URL, file path, JSON string, or plain JavaScript object.
+- FR-2: The library must fully resolve all `$ref` pointers before data generation.
+- FR-3: Data generation must follow the priority chain: consumer overrides → spec examples/defaults → `x-faker-method` → smart defaults → type-based fallback.
+- FR-4: When `ignoreExamples: true` is set, the library must skip spec `example` and `default` values and use Faker for all values.
+- FR-5: The `seed` option must produce fully deterministic output, including optional field omission and array lengths.
+- FR-6: `allOf` schemas must be deep-merged before generation. `oneOf` must select one sub-schema (respecting discriminator if present). `anyOf` must select one or more.
+- FR-7: Circular references must stop at `maxDepth` (default 3) and produce `null`, omission, or a minimal stub as documented.
+- FR-8: Optional properties must be randomly included/omitted (seeded). Nullable fields must randomly receive `null` (seeded).
+- FR-9: MSW handlers must use `http.*` methods from MSW v2 and return `application/json` responses with correct status codes.
+- FR-10: `echoPathParams` must map request path parameters to matching response properties in MSW handlers.
+- FR-11: Per-operation `transform` in `.handlers()` must receive both generated data and the MSW `Request` object.
+- FR-12: Non-JSON content types must emit a console warning and be skipped, not throw.
+- FR-13: The library must throw hard (with descriptive errors) for broken `$ref` pointers, invalid `x-faker-method` paths, and other unrecoverable spec issues.
+- FR-14: The docs site must auto-generate API reference pages from the library's TypeScript source using `starlight-typedoc`.
+- FR-15: Appending `.md` to any doc URL must return the raw Markdown source with `Content-Type: text/markdown`.
+
+## Non-Goals
+
+- No non-JSON content type generation (binary, XML, multipart, etc.) — only `application/json` in v1.
+- No CLI or build-time code generation — v1 is runtime-only.
+- No request body validation — handlers do not inspect or validate incoming request bodies.
+- No stateful mock server behavior — no CRUD, pagination state, or session tracking built into the library. Consumers implement these via `transform` callbacks.
+- No fuzzy or AI-based property name matching — smart defaults use a curated list only.
+- No Zod integration in v1 — the `openapi-mocks/zod` subpath is future work and explicitly out of scope for this PRD.
+- No doc versioning (v1/v2 switcher) — unnecessary until a v2 exists.
+- No Storybook example — mentioned as future in DOCS_PLAN, not part of this delivery.
+
+## Technical Considerations
+
+- **pnpm workspaces** manage the monorepo. All packages share a root `tsconfig.json` base.
+- **Vite 8 library mode** builds the package. ESM is required; CJS is produced if Vite supports it cleanly, otherwise ESM-only.
+- **MSW v2 is a peer dependency.** MSW is lazily loaded via dynamic `import("msw")` inside `.handlers()`. Consumers who only use `.data()` or `generateFromSchema` never need MSW installed. Calling `.handlers()` without MSW throws a descriptive error at call time.
+- **`@faker-js/faker`** and **`@apidevtools/swagger-parser`** are direct (bundled) dependencies.
+- **Starlight** reads the library's raw TypeScript source for API reference generation (Option A from our discussion) — no build step required before docs build.
+- **Example projects** are independent sub-packages under `examples/`. They are NOT workspace members, ensuring they can be cloned and run standalone.
+- **Cloudflare Pages** hosts the docs site. The Markdown content negotiation feature requires either a Pages Function or Astro hybrid rendering.
+
+## Success Metrics
+
+- `pnpm install && pnpm build && pnpm test` succeeds from the monorepo root with zero failures.
+- `generateFromSchema` correctly generates data for all OpenAPI types, formats, and composition keywords, verified by unit tests.
+- Integration tests against Petstore and at least one large real-world spec pass with no thrown errors.
+- Seed-based snapshot tests produce stable, deterministic output across runs.
+- Example projects (`examples/playwright`, `examples/mock-server`) install and run successfully as standalone packages.
+- The docs site builds, all pages render, and the API reference matches the library's public exports.
+
+## Open Questions
+
+- **Auth mocking depth:** What should security scheme mocking look like? Range from "handlers ignore auth entirely" to "handlers check for token presence and return 401/403 if missing." Needs scoping before implementation.
+- **`pattern` support quality:** `faker.helpers.fromRegExp` handles simple patterns but complex regex may produce invalid output. Accept best-effort with a logged warning, or skip pattern-based generation entirely?
+- **Example project linking:** Should examples reference `openapi-mocks` via `workspace:*` (works in dev but breaks if someone clones just the example), or via a published version on npm (works standalone but lags behind development)? Consider `file:` protocol links or a setup script.
+- **Doc deploy cadence:** Docs and library live in the same repo, so doc deploys are coupled to code changes. Consider a Cloudflare Pages build filter or separate deploy trigger if this causes friction.
