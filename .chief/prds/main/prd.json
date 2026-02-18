@@ -48,7 +48,8 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false
+      "passes": false,
+      "inProgress": true
     },
     {
       "id": "US-004",
