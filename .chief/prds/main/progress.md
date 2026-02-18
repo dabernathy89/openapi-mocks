@@ -1,3 +1,23 @@
+## 2026-02-18 - US-031
+- What was implemented: Astro/Starlight docs site scaffolded in `docs/` (already a workspace member)
+- Files changed:
+  - `docs/package.json` — added `scripts` (dev, build, preview, typecheck), `@astrojs/check` and `typescript` as devDependencies
+  - `docs/astro.config.mjs` — Starlight config with site title "openapi-mocks", empty sidebar groups for Guides/Examples/API Reference
+  - `docs/tsconfig.json` — extends `astro/tsconfigs/strict`, includes `.astro/types.d.ts`
+  - `docs/src/env.d.ts` — Astro env type reference
+  - `docs/src/content.config.ts` — content collection config using `docsLoader()` + `docsSchema()` (suppresses Astro deprecation warning)
+  - `docs/src/content/docs/index.mdx` — placeholder landing page with hero, quick start code snippets
+  - `pnpm-lock.yaml` — updated with astro, @astrojs/starlight, @astrojs/check dependencies
+  - `.chief/prds/main/prd.json` — marked US-031 as passes: true
+- **Learnings for future iterations:**
+  - Astro 5.x emits a deprecation warning for auto-generated collections — create `src/content.config.ts` with explicit `defineCollection` using `docsLoader()` + `docsSchema()` from `@astrojs/starlight` to suppress it
+  - `@astrojs/check` is the package for `astro check` (typecheck); add it as a devDependency alongside `typescript`
+  - The `docs/tsconfig.json` should extend `astro/tsconfigs/strict` (not the root tsconfig) — Astro provides its own tsconfig presets
+  - Root typecheck (`tsc --noEmit`) does NOT pick up `docs/` — it's excluded from the root tsconfig; docs typecheck runs separately via `astro check`
+  - `pnpm build` in `docs/` outputs to `docs/dist/` automatically (Astro default)
+  - Empty sidebar `items: []` arrays are valid in Starlight config — no placeholder entries needed
+---
+
 ## 2026-02-18 - US-030
 - What was implemented: Self-contained mock server example project in `examples/mock-server/` using Hono + openapi-mocks core (no MSW)
 - Files changed:
