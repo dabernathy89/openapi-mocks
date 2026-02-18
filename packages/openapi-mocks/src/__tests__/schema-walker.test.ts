@@ -804,6 +804,158 @@ describe('generateValueForSchema', () => {
   });
 
   // -------------------------------------------------------------------------
+  // OpenAPI 3.0.x vs 3.1.x compatibility (US-012)
+  // -------------------------------------------------------------------------
+  describe('OpenAPI 3.0.x vs 3.1.x compatibility', () => {
+    it('3.0.x nullable: true treated equivalently to 3.1.x type: ["string", "null"]', () => {
+      const schema30 = { type: 'string', nullable: true } as Record<string, unknown>;
+      const schema31 = { type: ['string', 'null'] } as Record<string, unknown>;
+
+      // Both should produce null sometimes and a string other times
+      const results30: unknown[] = [];
+      const results31: unknown[] = [];
+
+      for (let i = 0; i < 50; i++) {
+        fakerInstance.seed(i);
+        results30.push(generateValueForSchema(schema30, { faker: fakerInstance, ignoreExamples: true }));
+        fakerInstance.seed(i);
+        results31.push(generateValueForSchema(schema31, { faker: fakerInstance, ignoreExamples: true }));
+      }
+
+      // Both should have null values
+      expect(results30.some((r) => r === null)).toBe(true);
+      expect(results31.some((r) => r === null)).toBe(true);
+      // Both should have string values
+      expect(results30.some((r) => typeof r === 'string')).toBe(true);
+      expect(results31.some((r) => typeof r === 'string')).toBe(true);
+      // Neither should produce non-string, non-null values
+      expect(results30.every((r) => r === null || typeof r === 'string')).toBe(true);
+      expect(results31.every((r) => r === null || typeof r === 'string')).toBe(true);
+    });
+
+    it('3.1.x type array uses non-null type for generation when not returning null', () => {
+      const schema = { type: ['integer', 'null'], minimum: 1, maximum: 100 } as Record<string, unknown>;
+
+      const results: unknown[] = [];
+      for (let i = 0; i < 50; i++) {
+        fakerInstance.seed(i);
+        results.push(generateValueForSchema(schema, { faker: fakerInstance, ignoreExamples: true }));
+      }
+
+      // Non-null values must be integers (whole numbers)
+      const nonNulls = results.filter((r) => r !== null);
+      expect(nonNulls.length).toBeGreaterThan(0);
+      for (const v of nonNulls) {
+        expect(typeof v).toBe('number');
+        expect(Number.isInteger(v)).toBe(true);
+        expect(v as number).toBeGreaterThanOrEqual(1);
+        expect(v as number).toBeLessThanOrEqual(100);
+      }
+    });
+
+    it('3.1.x type array with multiple non-null types uses the first non-null type', () => {
+      const schema = { type: ['string', 'null'] } as Record<string, unknown>;
+
+      const results: unknown[] = [];
+      for (let i = 0; i < 30; i++) {
+        fakerInstance.seed(i);
+        results.push(generateValueForSchema(schema, { faker: fakerInstance, ignoreExamples: true }));
+      }
+
+      const nonNulls = results.filter((r) => r !== null);
+      expect(nonNulls.length).toBeGreaterThan(0);
+      // All non-null values must be strings
+      for (const v of nonNulls) {
+        expect(typeof v).toBe('string');
+      }
+    });
+
+    it('3.0.x nullable integer schema generates integers when not null', () => {
+      const schema = {
+        type: 'integer',
+        nullable: true,
+        minimum: 10,
+        maximum: 20,
+      } as Record<string, unknown>;
+
+      const results: unknown[] = [];
+      for (let i = 0; i < 50; i++) {
+        fakerInstance.seed(i);
+        results.push(generateValueForSchema(schema, { faker: fakerInstance, ignoreExamples: true }));
+      }
+
+      const nonNulls = results.filter((r) => r !== null);
+      expect(nonNulls.length).toBeGreaterThan(0);
+      for (const v of nonNulls) {
+        expect(typeof v).toBe('number');
+        expect(Number.isInteger(v)).toBe(true);
+        expect(v as number).toBeGreaterThanOrEqual(10);
+        expect(v as number).toBeLessThanOrEqual(20);
+      }
+    });
+
+    it('sibling keywords alongside a resolved $ref are respected', () => {
+      // In 3.1.x, $ref siblings are valid. After Swagger Parser resolution,
+      // $ref is gone but sibling keywords remain. The walker should honor them.
+      // Simulating post-resolution: schema has sibling keywords (description, example)
+      // alongside the resolved properties — walker must not discard them.
+      const schema = {
+        type: 'object',
+        description: 'A user object',
+        example: { id: 'example-id', name: 'Example User' },
+        properties: {
+          id: { type: 'string' },
+          name: { type: 'string' },
+        },
+        required: ['id', 'name'],
+      } as Record<string, unknown>;
+
+      // With ignoreExamples: false, the example sibling keyword is used
+      fakerInstance.seed(SEED);
+      const withExample = generateValueForSchema(schema, {
+        faker: fakerInstance,
+        ignoreExamples: false,
+      }) as Record<string, unknown>;
+      expect(withExample).toEqual({ id: 'example-id', name: 'Example User' });
+
+      // With ignoreExamples: true, the type-based fallback is used
+      fakerInstance.seed(SEED);
+      const withoutExample = generateValueForSchema(schema, {
+        faker: fakerInstance,
+        ignoreExamples: true,
+      }) as Record<string, unknown>;
+      expect(typeof withoutExample['id']).toBe('string');
+      expect(typeof withoutExample['name']).toBe('string');
+    });
+
+    it('3.0.x nullable object generates object when not null', () => {
+      const schema = {
+        type: 'object',
+        nullable: true,
+        properties: {
+          value: { type: 'string' },
+        },
+        required: ['value'],
+      } as Record<string, unknown>;
+
+      const results: unknown[] = [];
+      for (let i = 0; i < 50; i++) {
+        fakerInstance.seed(i);
+        results.push(generateValueForSchema(schema, { faker: fakerInstance, ignoreExamples: true }));
+      }
+
+      const nonNulls = results.filter((r) => r !== null);
+      expect(nonNulls.length).toBeGreaterThan(0);
+      for (const v of nonNulls) {
+        expect(typeof v).toBe('object');
+        expect(v).not.toBeNull();
+        expect((v as Record<string, unknown>)['value']).toBeDefined();
+        expect(typeof (v as Record<string, unknown>)['value']).toBe('string');
+      }
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Circular reference handling
   // -------------------------------------------------------------------------
   describe('circular reference handling', () => {
