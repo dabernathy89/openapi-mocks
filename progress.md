@@ -124,3 +124,17 @@
   - Do NOT pass `overrides` into the schema-walker's `overrides` option — this caused double-application. Pass `overrides: {}` to the walker and apply them post-generation via `applyOverrides`
   - The utils directory `src/utils/` is the right location for standalone helper utilities not tied to a specific generator
 ---
+
+## 2026-02-18 - US-019
+- What was implemented: Core `echoPathParams` logic — path parameter name matching and response field injection
+- Files changed:
+  - `packages/openapi-mocks/src/utils/echo-path-params.ts` — new file with `applyEchoPathParams` and `extractPathParamNames` functions
+  - `packages/openapi-mocks/src/__tests__/echo-path-params.test.ts` — 12 unit tests covering exact match, no match, camelCase/snake_case variants, multiple params, mutation behavior
+  - `.chief/prds/main/prd.json` — marked US-019 as passes: true
+- **Learnings for future iterations:**
+  - `echoPathParams` core logic lives in `src/utils/echo-path-params.ts`; the MSW wiring is separate (US-021)
+  - Candidate name generation: if param is camelCase (has uppercase), add snake_case variant; if param is snake_case (has `_`), add camelCase variant
+  - `applyEchoPathParams` mutates the data object in place (consistent with `applyOverrides` pattern) and returns it
+  - Only apply the first matching candidate per param to avoid double-patching when data has both `userId` and `user_id`
+  - `.data()` ignores `echoPathParams` silently — the option is not even in `DataOptions`; it's only meaningful for `.handlers()` (US-020/021)
+---
