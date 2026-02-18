@@ -3,6 +3,10 @@
 - Use `new Faker({ locale: [en] })` + `faker.seed(seed)` to create a seeded Faker instance (not `faker.seed()` on the shared default instance)
 - Tests live in `packages/openapi-mocks/src/__tests__/` and import with `.js` extension (e.g., `'../generators/smart-defaults.js'`)
 - Source files use ESM; Vitest is configured in the package
+- MSW handlers: use `handler.resolver({ request, params, cookies: {} })` to invoke the resolver directly in tests (NOT `handler.run()` which returns null for internal MSW reasons)
+- MSW handler info: `handler.info.header` contains the method+path string (e.g. "GET /users/:userId") — useful for asserting URL patterns in tests
+- OpenAPI `{param}` → MSW `:param` path conversion needed for handler URL patterns
+- Pre-check for JSON schema existence before creating MSW handler (skip operations with no JSON response content to avoid creating handlers with undefined resolvers)
 - Run `pnpm test` from `packages/openapi-mocks/` for tests, `pnpm exec tsc --noEmit` for typecheck
 - `normalizeName` strips underscores and lowercases for camelCase/snake_case/case-insensitive matching
 - Faker output type conflict detection uses a `COMPATIBLE_SCHEMA_TYPES` map to skip smart defaults when schema type is incompatible
@@ -10,7 +14,66 @@
 - Optional fields use `faker.datatype.boolean()` for ~50/50 omission; overrides force inclusion by checking if any override key starts with `${propPath}`
 - Circular ref detection uses `_visitedSchemas: Set<object>` (by identity) combined with `_depth` vs `maxDepth`
 - `arrayLengths` wildcard `[*]` notation: in `generateArray`, scan all arrayLengths keys for `{currentPath}[*].{childKey}` pattern, de-scope to `{childKey}` for item generation; consumed wildcard keys are removed from itemArrayLengths to avoid re-matching
+- Root tsconfig.json must exclude `planning/` — it contains example .ts files that import unresolved modules
+- `packages/openapi-mocks/src/index.ts` placeholder is required for typecheck to find inputs
+- pnpm workspace: `packages/*` and `docs` are workspace members; `examples/*` are NOT (intentionally standalone)
+- Root typecheck script: `tsc --noEmit` (relies on root tsconfig.json)
+- pnpm version in use: 10.26.1; TypeScript version: 5.9.3
+- Root tsconfig includes `"types": ["node"]` and root has `@types/node` — needed because vite.config.ts files are picked up by root typecheck and require Node globals
+- `pnpm-workspace.yaml` `onlyBuiltDependencies: [esbuild]` allows esbuild postinstall script (required for Vite to work)
+- Vite config uses `new URL('src/index.ts', import.meta.url).pathname` instead of `__dirname` (ESM-native approach, no `node:path` import needed)
+- `@apidevtools/swagger-parser` exports as CJS default (`export = SwaggerParser`) — use `import SwaggerParser from '...'` (default import) in TS files; Vitest mocking: `vi.mock(...)` + `(await import(...)).default.dereference`
+- In Vitest tests that mock modules, use dynamic `await import('../parser.js')` after setting up mocks so the module resolves with the mock in place
+- `@faker-js/faker` v10.x is current; `faker.datatype.boolean()` works; `faker.helpers.fromRegExp(pattern)` for pattern support
+- OpenAPI exclusiveMinimum/exclusiveMaximum: 3.0.x uses boolean, 3.1.x uses numeric — handle both in type-fallback
+- Generators live in `packages/openapi-mocks/src/generators/` — create subdirectory for each major concern
 
+---
+
+## 2026-02-18 - US-019
+- What was implemented: Core `echoPathParams` logic — path parameter name matching and response field injection
+- Files changed:
+  - `packages/openapi-mocks/src/utils/echo-path-params.ts` — new file with `applyEchoPathParams` and `extractPathParamNames` functions
+  - `packages/openapi-mocks/src/__tests__/echo-path-params.test.ts` — 12 unit tests covering exact match, no match, camelCase/snake_case variants, multiple params, mutation behavior
+  - `.chief/prds/main/prd.json` — marked US-019 as passes: true
+- **Learnings for future iterations:**
+  - `echoPathParams` core logic lives in `src/utils/echo-path-params.ts`; the MSW wiring is separate (US-021)
+  - Candidate name generation: if param is camelCase (has uppercase), add snake_case variant; if param is snake_case (has `_`), add camelCase variant
+  - `applyEchoPathParams` mutates the data object in place (consistent with `applyOverrides` pattern) and returns it
+  - Only apply the first matching candidate per param to avoid double-patching when data has both `userId` and `user_id`
+  - `.data()` ignores `echoPathParams` silently — the option is not even in `DataOptions`; it's only meaningful for `.handlers()` (US-020/021)
+---
+
+## 2026-02-18 - US-018
+- What was implemented: Overrides / consumer value injection via a post-generation deep-set utility
+- Files changed:
+  - `packages/openapi-mocks/src/utils/deep-set.ts` — new file with `setByPath` and `applyOverrides` functions
+  - `packages/openapi-mocks/src/mock-client.ts` — import `applyOverrides` and apply overrides post-generation (after `generateValueForSchema`, before `transform`)
+  - `packages/openapi-mocks/src/__tests__/deep-set.test.ts` — unit tests for `setByPath` and `applyOverrides`
+  - `packages/openapi-mocks/src/__tests__/overrides.test.ts` — integration tests via `createMockClient` covering top-level, nested, array index, null, and multiple overrides
+  - `.chief/prds/main/prd.json` — marked US-018 as passes: true
+- **Learnings for future iterations:**
+  - Overrides are applied **after** `generateValueForSchema` and **before** the `transform` callback — this is the correct ordering per spec
+  - `setByPath` must check if the existing value is a non-object primitive before creating intermediates — otherwise it silently overwrites scalars with `{}` (bug caught by test)
+  - Do NOT pass `overrides` into the schema-walker's `overrides` option — this caused double-application. Pass `overrides: {}` to the walker and apply them post-generation via `applyOverrides`
+  - The utils directory `src/utils/` is the right location for standalone helper utilities not tied to a specific generator
+---
+
+## 2026-02-18 - US-016
+- What was implemented: `createMockClient` factory function and `.data()` method
+- Files changed:
+  - `packages/openapi-mocks/src/mock-client.ts` — new file with `createMockClient`, `MockClient`, `GlobalOptions`, `DataOptions`, `OperationOptions` types and full `.data()` implementation
+  - `packages/openapi-mocks/src/index.ts` — added exports for `createMockClient` and all new types plus `SpecInput`
+  - `packages/openapi-mocks/src/__tests__/mock-client.test.ts` — 20 unit tests covering all acceptance criteria
+  - `.chief/prds/main/prd.json` — marked US-016 as passes: true
+- **Learnings for future iterations:**
+  - The spec is parsed lazily on first `.data()` call and cached via a closure — subsequent calls reuse the same promise
+  - `extractOperations` iterates over all HTTP methods in `doc.paths` and skips operations without `operationId`
+  - Default status code selection: find lowest 2xx defined in `operation.responses`; skip with `console.warn` if none found
+  - Non-JSON content types emit `console.warn` and return `undefined` schema (skipped from generation)
+  - `arrayLengths` per-operation are passed directly to `generateValueForSchema` options
+  - Tests use `vi.mock('../parser.js')` with `beforeEach` + `vi.resetModules()` to get a fresh mock for each test — avoids cross-test state
+  - The `transform` callback receives `{ ...generated }` (a shallow copy), not the internal reference
 ---
 
 ## 2026-02-18 - US-017
@@ -178,4 +241,82 @@
   - Both files were already present in the working tree (git untracked) before this iteration started — the implementation was pre-written but not committed
   - All 151 tests passed without modifications needed
   - Normalization approach (lowercase + strip underscores) elegantly handles camelCase, snake_case, PascalCase, and UPPER_CASE variants in one pass
+---
+
+## 2026-02-18 - US-005
+- What was implemented: Type-based fallback data generation module using Faker.js
+- Files changed:
+  - `packages/openapi-mocks/src/generators/type-fallback.ts` — `generateFromTypeFallback(schema, faker)` function; handles all OpenAPI types (string, number, integer, boolean, array, object, null); handles string formats (date-time, date, email, uri/url, uuid, hostname, ipv4, ipv6, byte); respects numeric constraints (minimum, maximum, exclusiveMinimum, exclusiveMaximum, multipleOf); handles int32/int64 ranges; handles enum; handles OpenAPI 3.1.x array types; type inference from properties/items
+  - `packages/openapi-mocks/src/__tests__/type-fallback.test.ts` — 43 unit tests covering every type, every string format, constraints, enum, determinism, and type inference
+  - `packages/openapi-mocks/package.json` — added `@faker-js/faker` as direct dependency
+  - `pnpm-lock.yaml` — updated with faker dependency
+- **Learnings for future iterations:**
+  - `@faker-js/faker` v10 is current; API is stable with `faker.datatype.boolean()`, `faker.helpers.fromRegExp()`, `faker.helpers.arrayElement()`
+  - OpenAPI 3.0.x uses boolean `exclusiveMinimum`/`exclusiveMaximum` alongside `minimum`/`maximum`; 3.1.x uses them as standalone numeric values — need to detect both patterns
+  - For `multipleOf` on floats, use `Math.round(value / multipleOf) * multipleOf` to avoid floating-point issues
+  - For unknown/missing type, infer from presence of `properties` (object) or `items` (array) keys — this handles many real-world specs
+  - Tests cast schemas to `Record<string, unknown>` for 3.0.x-specific fields (exclusiveMinimum boolean) since openapi-types doesn't declare those as boolean
+---
+
+## 2026-02-18 - US-004
+- What was implemented: OpenAPI spec input parsing and resolution module
+- Files changed:
+  - `packages/openapi-mocks/src/parser.ts` — `resolveSpec(input: SpecInput)` async function; handles URL strings, JSON strings, file path strings, and plain objects; validates result is OpenAPI 3.x
+  - `packages/openapi-mocks/src/__tests__/parser.test.ts` — 8 unit tests covering all four input forms, return value, and error cases
+  - `packages/openapi-mocks/package.json` — added `@apidevtools/swagger-parser` and `openapi-types` as direct dependencies
+  - `pnpm-lock.yaml` — updated
+- **Learnings for future iterations:**
+  - `@apidevtools/swagger-parser` v12 has no `exports` field — pnpm installs it only in the local package's `node_modules`, not the root
+  - The library uses `export = SwaggerParser` (CommonJS default), so TypeScript requires `import SwaggerParser from '...'` (default import)
+  - Vitest module mocking: use `vi.mock('@apidevtools/swagger-parser', () => ({ default: { dereference: vi.fn() } }))` then re-import via dynamic `await import(...)` in each test to pick up the mock
+  - Swagger Parser's `dereference` accepts `string | OpenAPI.Document` — no need to cast Record types; just cast to `OpenAPIV3.Document | OpenAPIV3_1.Document`
+---
+
+## 2026-02-18 - US-003
+- What was implemented: Configured Vitest for the library package with a smoke test
+- Files changed:
+  - `packages/openapi-mocks/vitest.config.ts` — Vitest config with `include` pattern for `src/**/*.test.ts` and `src/__tests__/**/*.test.ts`
+  - `packages/openapi-mocks/src/__tests__/smoke.test.ts` — trivial smoke test asserting `true === true`
+  - `packages/openapi-mocks/package.json` — added `test` script (`vitest run`) and `vitest` devDependency
+  - `pnpm-lock.yaml` — updated with vitest and dependencies
+- **Learnings for future iterations:**
+  - Vitest version 3.x is current (vitest@^3.2.4 installed fine)
+  - `vitest run` (not `vitest`) is the correct non-interactive script for CI/package scripts
+  - Separate `vitest.config.ts` keeps concerns clean — no need to merge into vite.config.ts
+  - Root `pnpm -r test` automatically picks up the package test script without any root config changes
+---
+
+## 2026-02-18 - US-002
+- What was implemented: Configured Vite library build for `openapi-mocks` package
+- Files changed:
+  - `packages/openapi-mocks/vite.config.ts` — Vite library mode config with ESM + CJS outputs, vite-plugin-dts for declarations
+  - `packages/openapi-mocks/tsconfig.json` — extends root tsconfig, sets rootDir/outDir for declarations
+  - `packages/openapi-mocks/package.json` — added `exports` map (types/import/require), `main`, `module`, `types`, `files`, and `build`/`typecheck` scripts
+  - `pnpm-workspace.yaml` — added `onlyBuiltDependencies: [esbuild]` to allow esbuild postinstall
+  - `tsconfig.json` (root) — added `"types": ["node"]` so vite.config.ts Node globals typecheck correctly
+  - `package.json` (root) — added `@types/node` as devDependency
+  - `pnpm-lock.yaml` — updated with new dependencies (vite, vite-plugin-dts, typescript, @types/node)
+- **Learnings for future iterations:**
+  - esbuild (Vite's bundler) requires a postinstall script; must add to `onlyBuiltDependencies` in pnpm-workspace.yaml
+  - When using `import.meta.url` in vite.config.ts, the root tsconfig needs `@types/node` AND `"types": ["node"]` — otherwise `import.meta.url` is not recognized
+  - Vite 7 no longer shows "types condition order" warning once `types` is first in the exports map — put `types` before `import` and `require`
+  - `vite-plugin-dts` generates `.d.ts` and `.d.ts.map` files alongside the JS output automatically
+---
+
+## 2026-02-18 - US-001
+- What was implemented: Initialized pnpm monorepo structure with all required workspace configuration
+- Files changed:
+  - `package.json` (root) — private monorepo with pnpm@10.26.1, build/test/typecheck scripts
+  - `pnpm-workspace.yaml` — lists `packages/*` and `docs` as workspace members
+  - `tsconfig.json` (root) — strict mode, excludes planning/ and docs/ and examples/
+  - `.gitignore` — added `.astro/`, `.turbo/` entries
+  - `.npmrc` — `shamefully-hoist=false`
+  - `packages/openapi-mocks/package.json` — placeholder with name, version, type: module
+  - `packages/openapi-mocks/src/index.ts` — minimal placeholder export
+  - `docs/package.json` — private placeholder
+  - `pnpm-lock.yaml` — generated by pnpm install
+- **Learnings for future iterations:**
+  - The `planning/` directory contains example .ts files referencing `openapi-mocks` and `@playwright/test` (not installed). Always exclude it from the root tsconfig.
+  - A non-empty `packages/openapi-mocks/src/index.ts` is needed to avoid `TS18003: No inputs were found` on the root typecheck.
+  - The `examples/` directory is intentionally NOT a workspace member per CLAUDE.md — keep it out of pnpm-workspace.yaml.
 ---
