@@ -2,6 +2,13 @@ import SwaggerParser from '@apidevtools/swagger-parser';
 import type { OpenAPIV3, OpenAPIV3_1 } from 'openapi-types';
 import { OpenApiMocksError } from './errors.js';
 
+/**
+ * The accepted input forms for an OpenAPI spec.
+ * - URL string (`http://` or `https://`) — fetched by Swagger Parser
+ * - File path string — read from disk by Swagger Parser
+ * - JSON string (starts with `{`) — parsed then passed to Swagger Parser
+ * - Parsed object (`OpenAPIV3.Document`, `OpenAPIV3_1.Document`, or plain `Record`) — used directly
+ */
 export type SpecInput =
   | string
   | OpenAPIV3.Document

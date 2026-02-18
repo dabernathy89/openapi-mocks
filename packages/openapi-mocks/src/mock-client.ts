@@ -1,5 +1,6 @@
 import { Faker, en } from '@faker-js/faker';
 import type { OpenAPIV3, OpenAPIV3_1 } from 'openapi-types';
+import type { HttpHandler } from 'msw';
 import { OpenApiMocksError } from './errors.js';
 import { resolveSpec, type SpecInput } from './parser.js';
 import { generateValueForSchema, type Schema } from './generators/schema-walker.js';
@@ -140,8 +141,7 @@ export interface MockClient {
    * @throws If MSW is not installed when called.
    * @returns An array of MSW HttpHandler objects.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handlers(options?: HandlersOptions): Promise<any[]>;
+  handlers(options?: HandlersOptions): Promise<HttpHandler[]>;
 }
 
 /**
@@ -388,7 +388,7 @@ export function createMockClient(spec: SpecInput, options: GlobalOptions = {}): 
       return result;
     },
 
-    async handlers(callOptions: HandlersOptions = {}): Promise<unknown[]> {
+    async handlers(callOptions: HandlersOptions = {}): Promise<HttpHandler[]> {
       // Lazily import MSW — consumers who only use .data() never need it installed
       let msw: typeof import('msw');
       try {
@@ -408,7 +408,7 @@ export function createMockClient(spec: SpecInput, options: GlobalOptions = {}): 
       const effectiveStatusCodes = callStatusCodes ?? globalStatusCodes;
 
       const allOperations = extractOperations(doc);
-      const handlers: unknown[] = [];
+      const handlers: HttpHandler[] = [];
 
       for (const { operationId, method, path, operation } of allOperations) {
         // If operations filter is provided, only process listed operations

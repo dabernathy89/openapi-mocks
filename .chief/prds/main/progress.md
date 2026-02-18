@@ -1,3 +1,16 @@
+## 2026-02-18 - US-028
+- What was implemented: Finalized TypeScript public API barrel exports and type definitions
+- Files changed:
+  - `packages/openapi-mocks/src/index.ts` — added `HandlersOptions` to the exported types (was missing despite being part of the public API for `.handlers()`)
+  - `packages/openapi-mocks/src/parser.ts` — added TSDoc comment to `SpecInput` type (was the only exported type lacking documentation)
+  - `packages/openapi-mocks/src/mock-client.ts` — added `import type { HttpHandler } from 'msw'`; changed `MockClient.handlers()` return type from `Promise<any[]>` to `Promise<HttpHandler[]>`; changed internal `handlers` array type from `unknown[]` to `HttpHandler[]`; removed `eslint-disable-next-line @typescript-eslint/no-explicit-any` comment
+  - `.chief/prds/main/prd.json` — marked US-028 as passes: true
+- **Learnings for future iterations:**
+  - `import type { HttpHandler } from 'msw'` is safe even when MSW is an optional peer dep — type-only imports are erased at compile time and consumers don't need MSW installed for type-checking
+  - MSW is already a devDependency in the library package (for testing), so the type import works during development/CI
+  - All other public types already had TSDoc comments from their respective implementation stories; US-028 was mostly additive — adding `HandlersOptions` export and strengthening the `handlers()` return type
+---
+
 ## 2026-02-18 - US-027
 - What was implemented: semantic-release configuration for automated npm publishing
 - Files changed:
