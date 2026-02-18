@@ -259,6 +259,12 @@ export function generateValueForSchema(schema: Schema, options: GenerateValueOpt
     return generateOneOf(oneOf, schema, { ...baseOptions, propertyName, _overridePath });
   }
 
+  // --- anyOf composition: select one or more sub-schemas, merge, and generate ---
+  const anyOf = (schema as Record<string, unknown>)['anyOf'] as Schema[] | undefined;
+  if (anyOf && anyOf.length > 0) {
+    return generateAnyOf(anyOf, { ...baseOptions, propertyName, _overridePath });
+  }
+
   // --- Priority 5: Type-based generation ---
   const type = resolveType(schema);
 
@@ -339,6 +345,34 @@ function generateOneOf(
   }
 
   return generated;
+}
+
+/**
+ * Generate a value for an anyOf schema.
+ * Randomly selects one or more sub-schemas (seeded), merges them (same as allOf), and generates.
+ * At least one sub-schema is always selected.
+ */
+function generateAnyOf(
+  subSchemas: Schema[],
+  options: GenerateValueOptions & { propertyName?: string; _overridePath?: string },
+): unknown {
+  const { faker = defaultFaker } = options;
+
+  // Randomly decide how many to pick (at least 1, at most all)
+  const count = faker.number.int({ min: 1, max: subSchemas.length });
+
+  // Shuffle and pick `count` sub-schemas (seeded)
+  const shuffled = faker.helpers.shuffle([...subSchemas]);
+  const selected = shuffled.slice(0, count);
+
+  if (selected.length === 1) {
+    // Single selection — generate directly
+    return generateValueForSchema(selected[0]!, options);
+  }
+
+  // Multiple selections — merge using allOf logic, then generate
+  const merged = mergeAllOf(selected);
+  return generateValueForSchema(merged, options);
 }
 
 /**

@@ -724,6 +724,86 @@ describe('generateValueForSchema', () => {
   });
 
   // -------------------------------------------------------------------------
+  // anyOf composition
+  // -------------------------------------------------------------------------
+  describe('anyOf composition', () => {
+    it('selects at least one sub-schema', () => {
+      const schema = {
+        anyOf: [
+          { type: 'object', properties: { a: { type: 'string' } }, required: ['a'] },
+          { type: 'object', properties: { b: { type: 'string' } }, required: ['b'] },
+        ],
+      } as Record<string, unknown>;
+
+      // Run multiple times — should always produce a result (never undefined/null)
+      for (let i = 0; i < 20; i++) {
+        fakerInstance.seed(i);
+        const result = generateValueForSchema(schema, { faker: fakerInstance });
+        expect(result).not.toBeUndefined();
+        expect(typeof result).toBe('object');
+        expect(result).not.toBeNull();
+      }
+    });
+
+    it('can select a single sub-schema', () => {
+      const schema = {
+        anyOf: [
+          { type: 'string' },
+        ],
+      } as Record<string, unknown>;
+
+      const result = generateValueForSchema(schema, { faker: fakerInstance, ignoreExamples: true });
+      expect(typeof result).toBe('string');
+    });
+
+    it('merges multiple selected sub-schemas and includes all their properties', () => {
+      // With only 2 schemas, when both are selected, all properties appear
+      // Use minItems/maxItems to force 2 selections via schemas with no overlap
+      // Strategy: seed until we get a multi-schema merge scenario
+      let foundMulti = false;
+      for (let i = 0; i < 50; i++) {
+        fakerInstance.seed(i);
+        const schema = {
+          anyOf: [
+            { type: 'object', properties: { alpha: { type: 'string' } }, required: ['alpha'] },
+            { type: 'object', properties: { beta: { type: 'string' } }, required: ['beta'] },
+          ],
+        } as Record<string, unknown>;
+
+        const result = generateValueForSchema(schema, { faker: fakerInstance }) as Record<string, unknown>;
+        if ('alpha' in result && 'beta' in result) {
+          foundMulti = true;
+          break;
+        }
+      }
+      // With 50 iterations we expect at least one multi-selection case
+      expect(foundMulti).toBe(true);
+    });
+
+    it('produces varied output across seeds (different sub-schema selections)', () => {
+      const schema = {
+        anyOf: [
+          { type: 'object', properties: { x: { type: 'string' } }, required: ['x'] },
+          { type: 'object', properties: { y: { type: 'string' } }, required: ['y'] },
+        ],
+      } as Record<string, unknown>;
+
+      const hasX: boolean[] = [];
+      const hasY: boolean[] = [];
+      for (let i = 0; i < 30; i++) {
+        fakerInstance.seed(i);
+        const result = generateValueForSchema(schema, { faker: fakerInstance }) as Record<string, unknown>;
+        hasX.push('x' in result);
+        hasY.push('y' in result);
+      }
+
+      // Should see both x and y appear across seeds
+      expect(hasX.some(Boolean)).toBe(true);
+      expect(hasY.some(Boolean)).toBe(true);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Circular reference handling
   // -------------------------------------------------------------------------
   describe('circular reference handling', () => {
