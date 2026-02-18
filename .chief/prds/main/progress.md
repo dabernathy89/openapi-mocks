@@ -1,3 +1,22 @@
+## 2026-02-18 - US-030
+- What was implemented: Self-contained mock server example project in `examples/mock-server/` using Hono + openapi-mocks core (no MSW)
+- Files changed:
+  - `examples/mock-server/specs/products-api.yaml` — OpenAPI 3.1 spec with `listProducts`, `createProduct`, `getProduct`, `listCategories` operations; includes `Product`, `Category`, `CreateProductInput`, `ValidationError`, `NotFoundError` schemas
+  - `examples/mock-server/src/server.ts` — Hono server script; calls `createMockClient.data()` per route; demonstrates route registration, path param handling via `transform`, array length control, status code selection
+  - `examples/mock-server/package.json` — standalone package (not workspace member); `openapi-mocks: file:../../packages/openapi-mocks` local dep; `hono` + `@hono/node-server` as dependencies; `tsx` for running TypeScript directly
+  - `examples/mock-server/tsconfig.json` — TypeScript config with `module: NodeNext`, strict mode
+  - `examples/mock-server/.gitignore` — ignores node_modules, dist
+  - `examples/mock-server/README.md` — explains use case, setup, curl examples, caveats (no statefulness, no request validation)
+  - `.chief/prds/main/prd.json` — marked US-030 as passes: true
+- **Learnings for future iterations:**
+  - `pnpm install --ignore-workspace` is needed when installing from inside a monorepo subdirectory that is NOT a workspace member
+  - `esbuild` postinstall is blocked by default in standalone pnpm projects without `onlyBuiltDependencies` — results in a warning but doesn't break anything; `tsx` still works
+  - `tsx` (TypeScript executor) allows running `.ts` files directly without a build step — ideal for example projects where simplicity matters
+  - Hono's `@hono/node-server` package provides the Node.js adapter; `serve({ fetch: app.fetch, port })` is the correct startup API
+  - Path parameters in Hono: use `c.req.param('paramName')` to extract them; inject into mock data via the `transform` callback in `.data()`
+  - The `pnpm start` script works with `tsx src/server.ts` for instant startup without compilation
+---
+
 ## 2026-02-18 - US-029
 - What was implemented: Self-contained Playwright E2E example project in `examples/playwright/`
 - Files changed:
