@@ -1,5 +1,6 @@
 import SwaggerParser from '@apidevtools/swagger-parser';
 import type { OpenAPIV3, OpenAPIV3_1 } from 'openapi-types';
+import { OpenApiMocksError } from './errors.js';
 
 export type SpecInput =
   | string
@@ -34,7 +35,7 @@ export async function resolveSpec(
   // Ensure it's OpenAPI 3.x (not Swagger 2.x)
   const version = (doc as Record<string, unknown>)['openapi'] as string | undefined;
   if (!version || !version.startsWith('3.')) {
-    throw new Error(
+    throw new OpenApiMocksError(
       `openapi-mocks: expected an OpenAPI 3.x document but got ${
         version ? `openapi: "${version}"` : 'no "openapi" field'
       }`,

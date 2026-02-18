@@ -1,5 +1,6 @@
 import { faker as defaultFaker, type Faker } from '@faker-js/faker';
 import type { OpenAPIV3, OpenAPIV3_1 } from 'openapi-types';
+import { OpenApiMocksError } from '../errors.js';
 import { callFakerMethod } from './faker-extension.js';
 import { getSmartDefault } from './smart-defaults.js';
 import { generateFromTypeFallback } from './type-fallback.js';
@@ -128,7 +129,7 @@ export function mergeAllOf(subSchemas: Schema[]): Schema {
     const subType = typeof rawType === 'string' ? rawType : undefined;
     if (subType !== undefined) {
       if (mergedType !== undefined && mergedType !== subType) {
-        throw new Error(
+        throw new OpenApiMocksError(
           `openapi-mocks: allOf has conflicting types: "${mergedType}" vs "${subType}"`,
         );
       }

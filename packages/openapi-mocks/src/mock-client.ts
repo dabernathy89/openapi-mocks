@@ -1,5 +1,6 @@
 import { Faker, en } from '@faker-js/faker';
 import type { OpenAPIV3, OpenAPIV3_1 } from 'openapi-types';
+import { OpenApiMocksError } from './errors.js';
 import { resolveSpec, type SpecInput } from './parser.js';
 import { generateValueForSchema, type Schema } from './generators/schema-walker.js';
 import { applyOverrides } from './utils/deep-set.js';
@@ -393,7 +394,7 @@ export function createMockClient(spec: SpecInput, options: GlobalOptions = {}): 
       try {
         msw = await import('msw');
       } catch {
-        throw new Error(
+        throw new OpenApiMocksError(
           'openapi-mocks: .handlers() requires msw. Install it with: npm install msw',
         );
       }

@@ -1,3 +1,21 @@
+## 2026-02-18 - US-026
+- What was implemented: Custom `OpenApiMocksError` class; updated all `throw new Error(...)` calls in the library to use `OpenApiMocksError`; exported from public API; wrote unit tests
+- Files changed:
+  - `packages/openapi-mocks/src/errors.ts` — new file with `OpenApiMocksError` class extending `Error`; sets `name = 'OpenApiMocksError'`; fixes prototype chain with `Object.setPrototypeOf`
+  - `packages/openapi-mocks/src/generators/faker-extension.ts` — import and use `OpenApiMocksError` instead of `Error` (4 throw sites)
+  - `packages/openapi-mocks/src/generators/schema-walker.ts` — import and use `OpenApiMocksError` for `allOf` conflicting types error
+  - `packages/openapi-mocks/src/parser.ts` — import and use `OpenApiMocksError` for invalid OpenAPI version error
+  - `packages/openapi-mocks/src/mock-client.ts` — import and use `OpenApiMocksError` for missing MSW error
+  - `packages/openapi-mocks/src/index.ts` — export `OpenApiMocksError`
+  - `packages/openapi-mocks/src/__tests__/error-handling.test.ts` — new file with 14 tests covering: custom error class properties, instanceof checks, faker-extension errors, parser errors, allOf conflicting type errors
+  - `.chief/prds/main/prd.json` — marked US-026 as passes: true
+- **Learnings for future iterations:**
+  - `vi.resetModules()` in tests causes class identity mismatch — `OpenApiMocksError` from top-level import ≠ `OpenApiMocksError` from dynamically re-imported module; avoid `vi.resetModules()` when testing instanceof, OR import the error class dynamically alongside the module
+  - Use `Object.setPrototypeOf(this, new.target.prototype)` in custom Error subclasses to fix instanceof checks in transpiled environments
+  - When testing that an error thrown by module A is `instanceof ErrorClass` from module B, both must use the same module instance (no `vi.resetModules()` between them)
+  - Checking `.name === 'OpenApiMocksError'` is a reliable fallback when module identity makes `instanceof` fragile in module-mocked tests
+---
+
 ## 2026-02-18 - US-025
 - What was implemented: Integration tests against real-world OpenAPI specs (Petstore and GitHub subset)
 - Files changed:
