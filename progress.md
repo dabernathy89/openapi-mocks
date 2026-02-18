@@ -9,6 +9,9 @@
 - Vite config uses `new URL('src/index.ts', import.meta.url).pathname` instead of `__dirname` (ESM-native approach, no `node:path` import needed)
 - `@apidevtools/swagger-parser` exports as CJS default (`export = SwaggerParser`) — use `import SwaggerParser from '...'` (default import) in TS files; Vitest mocking: `vi.mock(...)` + `(await import(...)).default.dereference`
 - In Vitest tests that mock modules, use dynamic `await import('../parser.js')` after setting up mocks so the module resolves with the mock in place
+- `@faker-js/faker` v10.x is current; `faker.datatype.boolean()` works; `faker.helpers.fromRegExp(pattern)` for pattern support
+- OpenAPI exclusiveMinimum/exclusiveMaximum: 3.0.x uses boolean, 3.1.x uses numeric — handle both in type-fallback
+- Generators live in `packages/openapi-mocks/src/generators/` — create subdirectory for each major concern
 
 ---
 
@@ -73,4 +76,19 @@
   - The library uses `export = SwaggerParser` (CommonJS default), so TypeScript requires `import SwaggerParser from '...'` (default import)
   - Vitest module mocking: use `vi.mock('@apidevtools/swagger-parser', () => ({ default: { dereference: vi.fn() } }))` then re-import via dynamic `await import(...)` in each test to pick up the mock
   - Swagger Parser's `dereference` accepts `string | OpenAPI.Document` — no need to cast Record types; just cast to `OpenAPIV3.Document | OpenAPIV3_1.Document`
+---
+
+## 2026-02-18 - US-005
+- What was implemented: Type-based fallback data generation module using Faker.js
+- Files changed:
+  - `packages/openapi-mocks/src/generators/type-fallback.ts` — `generateFromTypeFallback(schema, faker)` function; handles all OpenAPI types (string, number, integer, boolean, array, object, null); handles string formats (date-time, date, email, uri/url, uuid, hostname, ipv4, ipv6, byte); respects numeric constraints (minimum, maximum, exclusiveMinimum, exclusiveMaximum, multipleOf); handles int32/int64 ranges; handles enum; handles OpenAPI 3.1.x array types; type inference from properties/items
+  - `packages/openapi-mocks/src/__tests__/type-fallback.test.ts` — 43 unit tests covering every type, every string format, constraints, enum, determinism, and type inference
+  - `packages/openapi-mocks/package.json` — added `@faker-js/faker` as direct dependency
+  - `pnpm-lock.yaml` — updated with faker dependency
+- **Learnings for future iterations:**
+  - `@faker-js/faker` v10 is current; API is stable with `faker.datatype.boolean()`, `faker.helpers.fromRegExp()`, `faker.helpers.arrayElement()`
+  - OpenAPI 3.0.x uses boolean `exclusiveMinimum`/`exclusiveMaximum` alongside `minimum`/`maximum`; 3.1.x uses them as standalone numeric values — need to detect both patterns
+  - For `multipleOf` on floats, use `Math.round(value / multipleOf) * multipleOf` to avoid floating-point issues
+  - For unknown/missing type, infer from presence of `properties` (object) or `items` (array) keys — this handles many real-world specs
+  - Tests cast schemas to `Record<string, unknown>` for 3.0.x-specific fields (exclusiveMinimum boolean) since openapi-types doesn't declare those as boolean
 ---
