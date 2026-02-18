@@ -92,3 +92,20 @@
   - For unknown/missing type, infer from presence of `properties` (object) or `items` (array) keys — this handles many real-world specs
   - Tests cast schemas to `Record<string, unknown>` for 3.0.x-specific fields (exclusiveMinimum boolean) since openapi-types doesn't declare those as boolean
 ---
+
+## 2026-02-18 - US-016
+- What was implemented: `createMockClient` factory function and `.data()` method
+- Files changed:
+  - `packages/openapi-mocks/src/mock-client.ts` — new file with `createMockClient`, `MockClient`, `GlobalOptions`, `DataOptions`, `OperationOptions` types and full `.data()` implementation
+  - `packages/openapi-mocks/src/index.ts` — added exports for `createMockClient` and all new types plus `SpecInput`
+  - `packages/openapi-mocks/src/__tests__/mock-client.test.ts` — 20 unit tests covering all acceptance criteria
+  - `.chief/prds/main/prd.json` — marked US-016 as passes: true
+- **Learnings for future iterations:**
+  - The spec is parsed lazily on first `.data()` call and cached via a closure — subsequent calls reuse the same promise
+  - `extractOperations` iterates over all HTTP methods in `doc.paths` and skips operations without `operationId`
+  - Default status code selection: find lowest 2xx defined in `operation.responses`; skip with `console.warn` if none found
+  - Non-JSON content types emit `console.warn` and return `undefined` schema (skipped from generation)
+  - `arrayLengths` per-operation are passed directly to `generateValueForSchema` options
+  - Tests use `vi.mock('../parser.js')` with `beforeEach` + `vi.resetModules()` to get a fresh mock for each test — avoids cross-test state
+  - The `transform` callback receives `{ ...generated }` (a shallow copy), not the internal reference
+---
