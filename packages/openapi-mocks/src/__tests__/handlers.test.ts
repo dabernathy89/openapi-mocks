@@ -225,7 +225,7 @@ describe('createMockClient .handlers()', () => {
     expect(result.status).toBe(200);
     expect(result.headers.get('content-type')).toContain('application/json');
 
-    const body = await result.json();
+    const body = await result.json() as Record<string, unknown>;
     expect(body).toHaveProperty('id');
     expect(body).toHaveProperty('name');
     expect(body).toHaveProperty('email');
@@ -298,7 +298,7 @@ describe('createMockClient .handlers()', () => {
     const handler = handlers[0] as HttpHandler;
     const mockRequest = new Request('https://api.example.com/users/123');
     const result = await invokeHandler(handler, mockRequest, { userId: '123' });
-    const body = await result.json();
+    const body = await result.json() as Record<string, unknown>;
 
     // email has example: 'user@example.com'
     expect(body.email).toBe('user@example.com');
@@ -313,7 +313,7 @@ describe('createMockClient .handlers()', () => {
     const handler = handlers[0] as HttpHandler;
     const mockRequest = new Request('https://api.example.com/users/123');
     const result = await invokeHandler(handler, mockRequest, { userId: '123' });
-    const body = await result.json();
+    const body = await result.json() as Record<string, unknown>;
 
     expect(body.email).not.toBe('user@example.com');
     expect(typeof body.email).toBe('string');
@@ -347,7 +347,7 @@ describe('createMockClient .handlers()', () => {
     const mockRequest = new Request('https://api.example.com/users/abc-123');
     const result = await invokeHandler(handler, mockRequest, { userId: 'abc-123' });
 
-    const body = await result.json();
+    const body = await result.json() as Record<string, unknown>;
     // 'id' is the response field that matches 'userId' param (no direct match for 'userId')
     // but 'userId' does not directly match 'id', 'name', or 'email' in the getUser response
     // → no echo occurs for 'userId' because the response has 'id', 'name', 'email'
@@ -398,7 +398,7 @@ describe('createMockClient .handlers()', () => {
     const mockRequest = new Request('https://api.example.com/items/my-item-id');
     const result = await invokeHandler(handler, mockRequest, { itemId: 'my-item-id' });
 
-    const body = await result.json();
+    const body = await result.json() as Record<string, unknown>;
     // echoPathParams is false → generated value is kept
     expect(body.itemId).not.toBe('my-item-id');
   });
@@ -443,7 +443,7 @@ describe('createMockClient .handlers()', () => {
     const mockRequest = new Request('https://api.example.com/items/my-exact-item');
     const result = await invokeHandler(handler, mockRequest, { itemId: 'my-exact-item' });
 
-    const body = await result.json();
+    const body = await result.json() as Record<string, unknown>;
     expect(body.itemId).toBe('my-exact-item');
   });
 
@@ -486,7 +486,7 @@ describe('createMockClient .handlers()', () => {
     const mockRequest = new Request('https://api.example.com/orders/order-999');
     const result = await invokeHandler(handler, mockRequest, { orderId: 'order-999' });
 
-    const body = await result.json();
+    const body = await result.json() as Record<string, unknown>;
     // camelCase param "orderId" matched snake_case "order_id" in response
     expect(body.order_id).toBe('order-999');
   });
@@ -530,7 +530,7 @@ describe('createMockClient .handlers()', () => {
     const mockRequest = new Request('https://api.example.com/products/42');
     const result = await invokeHandler(handler, mockRequest, { productId: '42' });
 
-    const body = await result.json();
+    const body = await result.json() as Record<string, unknown>;
     // "42" should be coerced to the number 42 since schema type is integer
     expect(body.productId).toBe(42);
     expect(typeof body.productId).toBe('number');
@@ -575,7 +575,7 @@ describe('createMockClient .handlers()', () => {
     const mockRequest = new Request('https://api.example.com/widgets/abc-789');
     const result = await invokeHandler(handler, mockRequest, { widgetId: 'abc-789' });
 
-    const body = await result.json();
+    const body = await result.json() as Record<string, unknown>;
     expect(body.widgetId).toBe('abc-789');
     expect(typeof body.widgetId).toBe('string');
   });
@@ -669,7 +669,7 @@ describe('createMockClient .handlers() - request-aware transform', () => {
     const mockRequest = new Request('https://api.example.com/users/123?filter=active');
     const result = await invokeHandler(handler, mockRequest, { userId: '123' });
 
-    const body = await result.json();
+    const body = await result.json() as Record<string, unknown>;
     expect(body.appliedFilter).toBe('active');
   });
 
@@ -689,7 +689,7 @@ describe('createMockClient .handlers() - request-aware transform', () => {
     const mockRequest = new Request('https://api.example.com/users/123');
     const result = await invokeHandler(handler, mockRequest, { userId: '123' });
 
-    const body = await result.json();
+    const body = await result.json() as Record<string, unknown>;
     expect(body).toEqual({ custom: 'response', only: 'these fields' });
     expect(body).not.toHaveProperty('id');
     expect(body).not.toHaveProperty('name');
@@ -711,7 +711,7 @@ describe('createMockClient .handlers() - request-aware transform', () => {
     const mockRequest = new Request('https://api.example.com/users/123');
     const result = await invokeHandler(handler, mockRequest, { userId: '123' });
 
-    const body = await result.json();
+    const body = await result.json() as Record<string, unknown>;
     // Original generated data should be preserved
     expect(body).toHaveProperty('id');
     expect(body).toHaveProperty('name');
@@ -789,7 +789,7 @@ describe('createMockClient .handlers() - request-aware transform', () => {
     // Page 1 (no cursor)
     const req1 = new Request('https://api.example.com/users');
     const res1 = await invokeHandler(handler, req1, {});
-    const body1 = await res1.json();
+    const body1 = await res1.json() as Record<string, unknown>;
     expect(body1.page).toBe(1);
     expect(body1.nextPage).toBe(2);
     expect(body1.totalPages).toBe(3);
@@ -797,7 +797,7 @@ describe('createMockClient .handlers() - request-aware transform', () => {
     // Page 2 (cursor=2)
     const req2 = new Request('https://api.example.com/users?cursor=2');
     const res2 = await invokeHandler(handler, req2, {});
-    const body2 = await res2.json();
+    const body2 = await res2.json() as Record<string, unknown>;
     expect(body2.page).toBe(2);
     expect(body2.nextPage).toBe(3);
     expect(body2.totalPages).toBe(3);
@@ -805,7 +805,7 @@ describe('createMockClient .handlers() - request-aware transform', () => {
     // Page 3 (cursor=3) — last page
     const req3 = new Request('https://api.example.com/users?cursor=3');
     const res3 = await invokeHandler(handler, req3, {});
-    const body3 = await res3.json();
+    const body3 = await res3.json() as Record<string, unknown>;
     expect(body3.page).toBe(3);
     expect(body3.nextPage).toBeNull();
     expect(body3.totalPages).toBe(3);

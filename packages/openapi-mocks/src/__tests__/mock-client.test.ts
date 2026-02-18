@@ -142,6 +142,30 @@ const minimalSpec: OpenAPIV3.Document = {
         },
       },
     },
+    '/mixed-content': {
+      get: {
+        operationId: 'mixedContentOp',
+        responses: {
+          '200': {
+            description: 'OK',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string' },
+                  },
+                  required: ['name'],
+                },
+              },
+              'image/png': {
+                schema: { type: 'string', format: 'binary' },
+              },
+            },
+          },
+        },
+      },
+    },
     '/no-operation-id': {
       get: {
         responses: {
@@ -444,11 +468,53 @@ describe('createMockClient', () => {
   // -----------------------------------------------------------------------
   describe('non-JSON content types', () => {
     it('skips operations with no application/json response content', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const client = createMockClient('./test.yaml', { seed: 42 });
       const data = await client.data();
 
       // noJsonOp has only application/octet-stream — should be skipped
       expect(data.has('noJsonOp')).toBe(false);
+
+      warnSpy.mockRestore();
+    });
+
+    it('emits a console.warn naming the operationId and content types when skipping non-JSON operation', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const client = createMockClient('./test.yaml', { seed: 42 });
+      await client.data();
+
+      // Should have warned about noJsonOp's non-JSON content
+      const warnCalls = warnSpy.mock.calls.map((args) => String(args[0]));
+      const noJsonWarn = warnCalls.find((msg) => msg.includes('noJsonOp'));
+      expect(noJsonWarn).toBeDefined();
+      expect(noJsonWarn).toContain('application/octet-stream');
+
+      warnSpy.mockRestore();
+    });
+
+    it('generates JSON variant for operations with both application/json and non-JSON content types', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const client = createMockClient('./test.yaml', { seed: 42 });
+      const data = await client.data();
+
+      // mixedContentOp has both application/json and image/png — should generate for JSON
+      expect(data.has('mixedContentOp')).toBe(true);
+      const opData = data.get('mixedContentOp')!;
+      const response200 = opData.get(200) as Record<string, unknown>;
+      expect(response200).toBeDefined();
+      expect(typeof response200.name).toBe('string');
+
+      warnSpy.mockRestore();
+    });
+
+    it('does not throw for non-JSON-only operations', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const client = createMockClient('./test.yaml', { seed: 42 });
+
+      // Should not throw
+      await expect(client.data()).resolves.not.toThrow();
+
+      warnSpy.mockRestore();
     });
   });
 

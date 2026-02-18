@@ -234,9 +234,11 @@ function selectStatusCodes(
 
 /**
  * Extract the JSON schema from a response object.
+ * Emits a console.warn (naming the operationId and found content types) if no application/json content is present.
  */
 function extractResponseSchema(
   response: OpenAPIV3.ResponseObject | OpenAPIV3_1.ResponseObject,
+  operationId?: string,
 ): Schema | undefined {
   const content = response.content;
   if (!content) return undefined;
@@ -250,8 +252,9 @@ function extractResponseSchema(
     // Non-JSON content — warn and skip
     const contentTypes = Object.keys(content);
     if (contentTypes.length > 0) {
+      const opLabel = operationId ? ` for operation "${operationId}"` : '';
       console.warn(
-        `openapi-mocks: response has no application/json content type (found: ${contentTypes.join(', ')}) — skipping`,
+        `openapi-mocks: response${opLabel} has no application/json content type (found: ${contentTypes.join(', ')}) — skipping`,
       );
     }
     return undefined;
@@ -313,7 +316,7 @@ export function createMockClient(spec: SpecInput, options: GlobalOptions = {}): 
 
     if (!responseObj) return undefined;
 
-    const schema = extractResponseSchema(responseObj);
+    const schema = extractResponseSchema(responseObj, operation.operationId);
     if (!schema) return undefined;
 
     let generated = generateValueForSchema(schema, {
@@ -426,7 +429,7 @@ export function createMockClient(spec: SpecInput, options: GlobalOptions = {}): 
           | OpenAPIV3_1.ResponseObject
           | undefined;
         if (!responseObj) continue;
-        const responseSchema = extractResponseSchema(responseObj);
+        const responseSchema = extractResponseSchema(responseObj, operationId);
         if (!responseSchema) continue;
 
         // Build the URL pattern: baseUrl + converted path
