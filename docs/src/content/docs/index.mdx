@@ -1,0 +1,41 @@
+---
+title: openapi-mocks
+description: Generate realistic mock data and MSW handlers from your OpenAPI spec.
+template: splash
+hero:
+  title: openapi-mocks
+  tagline: Spec-compliant mock data and MSW handlers from your OpenAPI document.
+  actions:
+    - text: Get Started
+      link: /guides/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/your-org/openapi-mocks
+      icon: external
+---
+
+## What is openapi-mocks?
+
+`openapi-mocks` is a TypeScript library that parses OpenAPI 3.0.x / 3.1.x documents
+and generates realistic mock data and pre-built [MSW](https://mswjs.io/) v2 request handlers.
+
+Get spec-compliant fake data for tests, stories, and local dev — all from a single OpenAPI source of truth.
+
+## Quick Start
+
+```bash
+npm install openapi-mocks
+```
+
+```ts
+import { createMockClient } from 'openapi-mocks';
+
+const client = createMockClient('./openapi.yaml');
+
+// Generate mock data
+const data = await client.data();
+
+// Generate MSW handlers (requires msw to be installed)
+const handlers = await client.handlers({ baseUrl: 'https://api.example.com' });
+```
