@@ -396,6 +396,158 @@ describe('generateValueForSchema', () => {
       }) as unknown[];
       expect(result.length).toBe(5);
     });
+
+    // -----------------------------------------------------------------------
+    // US-017: arrayLengths comprehensive tests
+    // -----------------------------------------------------------------------
+    it('arrayLengths exact length [3,3] generates exactly 3 items', () => {
+      const schema = {
+        type: 'object',
+        properties: {
+          items: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['items'],
+      } as Record<string, unknown>;
+      const result = generateValueForSchema(schema, {
+        faker: fakerInstance,
+        arrayLengths: { items: [3, 3] },
+      }) as Record<string, unknown>;
+      expect((result['items'] as unknown[]).length).toBe(3);
+    });
+
+    it('arrayLengths range [1,3] generates count within range (seeded)', () => {
+      const schema = {
+        type: 'array',
+        items: { type: 'string' },
+      } as Record<string, unknown>;
+      const lengths = new Set<number>();
+      for (let i = 0; i < 20; i++) {
+        fakerInstance.seed(i);
+        const result = generateValueForSchema(schema, {
+          faker: fakerInstance,
+          propertyName: 'tags',
+          arrayLengths: { tags: [1, 3] },
+        }) as unknown[];
+        expect(result.length).toBeGreaterThanOrEqual(1);
+        expect(result.length).toBeLessThanOrEqual(3);
+        lengths.add(result.length);
+      }
+      // Should have variation (not all the same length)
+      expect(lengths.size).toBeGreaterThan(1);
+    });
+
+    it('arrayLengths intersects with schema minItems/maxItems constraints', () => {
+      // arrayLengths [2,8], schema minItems=4, maxItems=6 → effective [4,6]
+      const schema = {
+        type: 'array',
+        items: { type: 'string' },
+        minItems: 4,
+        maxItems: 6,
+      } as Record<string, unknown>;
+      for (let i = 0; i < 10; i++) {
+        fakerInstance.seed(i);
+        const result = generateValueForSchema(schema, {
+          faker: fakerInstance,
+          propertyName: 'items',
+          arrayLengths: { items: [2, 8] },
+        }) as unknown[];
+        expect(result.length).toBeGreaterThanOrEqual(4);
+        expect(result.length).toBeLessThanOrEqual(6);
+      }
+    });
+
+    it('arrayLengths exact overrides schema constraints when equal tuple', () => {
+      // arrayLengths [5,5] with schema minItems=1, maxItems=10 → exactly 5
+      const schema = {
+        type: 'array',
+        items: { type: 'string' },
+        minItems: 1,
+        maxItems: 10,
+      } as Record<string, unknown>;
+      const result = generateValueForSchema(schema, {
+        faker: fakerInstance,
+        propertyName: 'items',
+        arrayLengths: { items: [5, 5] },
+      }) as unknown[];
+      expect(result.length).toBe(5);
+    });
+
+    it('default length 0-5 when no arrayLengths and no schema constraints', () => {
+      const schema = {
+        type: 'array',
+        items: { type: 'string' },
+      } as Record<string, unknown>;
+      const lengths: number[] = [];
+      for (let i = 0; i < 30; i++) {
+        fakerInstance.seed(i);
+        const result = generateValueForSchema(schema, { faker: fakerInstance }) as unknown[];
+        lengths.push(result.length);
+        expect(result.length).toBeGreaterThanOrEqual(0);
+        expect(result.length).toBeLessThanOrEqual(5);
+      }
+    });
+
+    it('wildcard [*] arrayLengths targets nested arrays in each element', () => {
+      // users[*].addresses: [1,1] → each user object's addresses array has exactly 1 item
+      const schema = {
+        type: 'object',
+        properties: {
+          users: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                name: { type: 'string' },
+                addresses: {
+                  type: 'array',
+                  items: { type: 'string' },
+                },
+              },
+              required: ['name', 'addresses'],
+            },
+          },
+        },
+        required: ['users'],
+      } as Record<string, unknown>;
+
+      const result = generateValueForSchema(schema, {
+        faker: fakerInstance,
+        arrayLengths: {
+          'users': [3, 3],
+          'users[*].addresses': [1, 1],
+        },
+      }) as Record<string, unknown>;
+
+      const users = result['users'] as Array<Record<string, unknown>>;
+      expect(users.length).toBe(3);
+      for (const user of users) {
+        expect(Array.isArray(user['addresses'])).toBe(true);
+        expect((user['addresses'] as unknown[]).length).toBe(1);
+      }
+    });
+
+    it('same seed produces same array length (determinism)', () => {
+      const schema = {
+        type: 'array',
+        items: { type: 'string' },
+      } as Record<string, unknown>;
+
+      fakerInstance.seed(42);
+      const result1 = generateValueForSchema(schema, {
+        faker: fakerInstance,
+        propertyName: 'tags',
+        arrayLengths: { tags: [1, 5] },
+      }) as unknown[];
+
+      fakerInstance.seed(42);
+      const result2 = generateValueForSchema(schema, {
+        faker: fakerInstance,
+        propertyName: 'tags',
+        arrayLengths: { tags: [1, 5] },
+      }) as unknown[];
+
+      expect(result1.length).toBe(result2.length);
+    });
   });
 
   // -------------------------------------------------------------------------

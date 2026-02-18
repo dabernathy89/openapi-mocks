@@ -467,38 +467,71 @@ function generateArray(
   const maxItems = (schema as Record<string, unknown>)['maxItems'] as number | undefined;
   const itemSchema = (schema as Record<string, unknown>)['items'] as Schema | undefined;
 
-  // Determine count: check arrayLengths first, then schema constraints, then default 0-5
+  // Determine count: schema constraints first (baseline), then default 0-5
   let min = 0;
   let max = 5;
 
-  if (minItems !== undefined) min = Math.max(min, minItems);
-  if (maxItems !== undefined) max = Math.min(max, maxItems);
+  if (minItems !== undefined) min = minItems;
+  if (maxItems !== undefined) max = maxItems;
 
-  // Check arrayLengths override
-  if (propertyName && arrayLengths[propertyName]) {
-    const [overrideMin, overrideMax] = arrayLengths[propertyName]!;
+  // Check arrayLengths override — intersect with schema constraints
+  // Match by propertyName first, then by overridePath
+  const lookupKey = (propertyName && arrayLengths[propertyName] !== undefined)
+    ? propertyName
+    : (overridePath && arrayLengths[overridePath] !== undefined)
+      ? overridePath
+      : undefined;
+
+  if (lookupKey !== undefined) {
+    const [overrideMin, overrideMax] = arrayLengths[lookupKey]!;
+    // Intersect: effective range is overlap of schema constraints and arrayLengths tuple
     min = Math.max(min, overrideMin);
     max = Math.min(max, overrideMax);
-    // If exact length (min === max from override), use that
-    if (overrideMin === overrideMax) {
-      min = overrideMin;
-      max = overrideMax;
-    }
-  } else if (overridePath && arrayLengths[overridePath]) {
-    const [overrideMin, overrideMax] = arrayLengths[overridePath]!;
-    min = Math.max(min, overrideMin);
-    max = Math.min(max, overrideMax);
+    // If exact length (min === max from override), respect that directly
     if (overrideMin === overrideMax) {
       min = overrideMin;
       max = overrideMax;
     }
   }
 
-  // Ensure min <= max
+  // Ensure min <= max (if constraints conflict, clamp to min)
   if (min > max) max = min;
 
   const count = faker.number.int({ min, max });
   const result: unknown[] = [];
+
+  // Build child arrayLengths by expanding wildcard [*] entries.
+  // e.g. if current path is "users" and arrayLengths has "users[*].addresses": [1,1],
+  // pass { addresses: [1,1] } into each item's generation.
+  // We check both overridePath and propertyName as possible wildcard base paths.
+  const wildcardPrefixes: string[] = [];
+  if (overridePath) wildcardPrefixes.push(`${overridePath}[*].`);
+  if (propertyName && propertyName !== overridePath) wildcardPrefixes.push(`${propertyName}[*].`);
+
+  const childArrayLengths: Record<string, [number, number]> = {};
+  const consumedKeys = new Set<string>();
+  for (const [key, val] of Object.entries(arrayLengths)) {
+    for (const prefix of wildcardPrefixes) {
+      if (key.startsWith(prefix)) {
+        const childKey = key.slice(prefix.length);
+        childArrayLengths[childKey] = val;
+        consumedKeys.add(key);
+        break;
+      }
+    }
+  }
+
+  // Pass remaining (non-wildcard) keys plus de-scoped wildcard keys to items
+  let itemArrayLengths = arrayLengths;
+  if (consumedKeys.size > 0) {
+    const remaining: Record<string, [number, number]> = {};
+    for (const [key, val] of Object.entries(arrayLengths)) {
+      if (!consumedKeys.has(key)) {
+        remaining[key] = val;
+      }
+    }
+    itemArrayLengths = { ...remaining, ...childArrayLengths };
+  }
 
   for (let i = 0; i < count; i++) {
     const itemPath = overridePath ? `${overridePath}.${i}` : String(i);
@@ -506,6 +539,7 @@ function generateArray(
       itemSchema
         ? generateValueForSchema(itemSchema, {
             ...options,
+            arrayLengths: itemArrayLengths,
             propertyName: undefined,
             _overridePath: itemPath,
           })
