@@ -4,6 +4,9 @@
 - pnpm workspace: `packages/*` and `docs` are workspace members; `examples/*` are NOT (intentionally standalone)
 - Root typecheck script: `tsc --noEmit` (relies on root tsconfig.json)
 - pnpm version in use: 10.26.1; TypeScript version: 5.9.3
+- Root tsconfig includes `"types": ["node"]` and root has `@types/node` — needed because vite.config.ts files are picked up by root typecheck and require Node globals
+- `pnpm-workspace.yaml` `onlyBuiltDependencies: [esbuild]` allows esbuild postinstall script (required for Vite to work)
+- Vite config uses `new URL('src/index.ts', import.meta.url).pathname` instead of `__dirname` (ESM-native approach, no `node:path` import needed)
 
 ---
 
@@ -23,4 +26,21 @@
   - The `planning/` directory contains example .ts files referencing `openapi-mocks` and `@playwright/test` (not installed). Always exclude it from the root tsconfig.
   - A non-empty `packages/openapi-mocks/src/index.ts` is needed to avoid `TS18003: No inputs were found` on the root typecheck.
   - The `examples/` directory is intentionally NOT a workspace member per CLAUDE.md — keep it out of pnpm-workspace.yaml.
+---
+
+## 2026-02-18 - US-002
+- What was implemented: Configured Vite library build for `openapi-mocks` package
+- Files changed:
+  - `packages/openapi-mocks/vite.config.ts` — Vite library mode config with ESM + CJS outputs, vite-plugin-dts for declarations
+  - `packages/openapi-mocks/tsconfig.json` — extends root tsconfig, sets rootDir/outDir for declarations
+  - `packages/openapi-mocks/package.json` — added `exports` map (types/import/require), `main`, `module`, `types`, `files`, and `build`/`typecheck` scripts
+  - `pnpm-workspace.yaml` — added `onlyBuiltDependencies: [esbuild]` to allow esbuild postinstall
+  - `tsconfig.json` (root) — added `"types": ["node"]` so vite.config.ts Node globals typecheck correctly
+  - `package.json` (root) — added `@types/node` as devDependency
+  - `pnpm-lock.yaml` — updated with new dependencies (vite, vite-plugin-dts, typescript, @types/node)
+- **Learnings for future iterations:**
+  - esbuild (Vite's bundler) requires a postinstall script; must add to `onlyBuiltDependencies` in pnpm-workspace.yaml
+  - When using `import.meta.url` in vite.config.ts, the root tsconfig needs `@types/node` AND `"types": ["node"]` — otherwise `import.meta.url` is not recognized
+  - Vite 7 no longer shows "types condition order" warning once `types` is first in the exports map — put `types` before `import` and `require`
+  - `vite-plugin-dts` generates `.d.ts` and `.d.ts.map` files alongside the JS output automatically
 ---
