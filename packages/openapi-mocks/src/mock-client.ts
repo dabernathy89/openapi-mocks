@@ -20,9 +20,11 @@ export interface OperationOptions {
 
   /**
    * Transform callback applied after data generation.
-   * Receives the generated data and returns a new object.
+   * In `.data()` calls, only the generated data is passed.
+   * In `.handlers()` calls, the intercepted MSW `Request` is also passed as the second argument.
+   * The returned object replaces the response body. If `undefined` is returned, the original data is used.
    */
-  transform?: (data: Record<string, unknown>) => Record<string, unknown>;
+  transform?: (data: Record<string, unknown>, request?: Request) => Record<string, unknown> | undefined;
 
   /**
    * Array length overrides: dot-path → [min, max]
@@ -294,6 +296,7 @@ export function createMockClient(spec: SpecInput, options: GlobalOptions = {}): 
 
   /**
    * Internal helper: generate data for a single operation+statusCode combo.
+   * The optional `request` argument is only provided when called from `.handlers()`.
    */
   function generateForOperation(
     operation: OpenAPIV3.OperationObject | OpenAPIV3_1.OperationObject,
@@ -301,6 +304,7 @@ export function createMockClient(spec: SpecInput, options: GlobalOptions = {}): 
     statusCode: number,
     faker: Faker,
     ignoreExamples: boolean,
+    request?: Request,
   ): Record<string, unknown> | undefined {
     const responseObj = operation.responses?.[String(statusCode)] as
       | OpenAPIV3.ResponseObject
@@ -325,7 +329,8 @@ export function createMockClient(spec: SpecInput, options: GlobalOptions = {}): 
     }
 
     if (operationOptions?.transform && typeof generated === 'object' && generated !== null) {
-      const transformed = operationOptions.transform({ ...generated });
+      // Pass a copy of the data plus the request (if available) to the transform callback.
+      const transformed = operationOptions.transform({ ...generated }, request);
       if (transformed !== undefined) {
         generated = transformed;
       }
@@ -442,7 +447,7 @@ export function createMockClient(spec: SpecInput, options: GlobalOptions = {}): 
         if (typeof handlerFn !== 'function') continue;
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const handler = (handlerFn as any)(urlPattern, ({ params }: { params: Record<string, string | string[]> }) => {
+        const handler = (handlerFn as any)(urlPattern, ({ request, params }: { request: Request; params: Record<string, string | string[]> }) => {
           // Create a fresh seeded Faker instance per-request
           const faker = new Faker({ locale: [en] });
           if (seed !== undefined) {
@@ -455,6 +460,7 @@ export function createMockClient(spec: SpecInput, options: GlobalOptions = {}): 
             capturedStatusCode,
             faker,
             capturedIgnoreExamples,
+            request,
           );
 
           if (generated === undefined) {

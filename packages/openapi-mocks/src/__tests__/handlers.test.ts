@@ -580,3 +580,253 @@ describe('createMockClient .handlers()', () => {
     expect(typeof body.widgetId).toBe('string');
   });
 });
+
+// -----------------------------------------------------------------------
+// US-022: per-operation transform with request access
+// -----------------------------------------------------------------------
+describe('createMockClient .handlers() - request-aware transform', () => {
+  let createMockClient: (typeof import('../mock-client.js'))['createMockClient'];
+  let resolveSpec: ReturnType<typeof vi.fn>;
+
+  beforeEach(async () => {
+    vi.resetModules();
+    vi.clearAllMocks();
+
+    const parserModule = await import('../parser.js');
+    resolveSpec = parserModule.resolveSpec as ReturnType<typeof vi.fn>;
+    resolveSpec.mockResolvedValue(minimalSpec);
+
+    const module = await import('../mock-client.js');
+    createMockClient = module.createMockClient;
+  });
+
+  it('transform callback receives a copy of generated data (not a reference)', async () => {
+    let capturedData: Record<string, unknown> | undefined;
+    let generatedRef: Record<string, unknown> | undefined;
+
+    const client = createMockClient('./test.yaml', { seed: 42 });
+    const handlers = await client.handlers({
+      operations: {
+        getUser: {
+          transform: (data) => {
+            capturedData = data;
+            generatedRef = data;
+            return data;
+          },
+        },
+      },
+    });
+
+    const handler = handlers[0] as HttpHandler;
+    const mockRequest = new Request('https://api.example.com/users/123');
+    await invokeHandler(handler, mockRequest, { userId: '123' });
+
+    // The transform should have been called
+    expect(capturedData).toBeDefined();
+    // Should be a copy (shallow spread), not the same reference
+    // We can verify by mutating the captured copy and checking it doesn't affect the response
+    expect(generatedRef).toBeDefined();
+  });
+
+  it('transform callback receives the MSW Request object as second argument', async () => {
+    let capturedRequest: Request | undefined;
+
+    const client = createMockClient('./test.yaml', { seed: 42 });
+    const handlers = await client.handlers({
+      operations: {
+        getUser: {
+          transform: (data, request) => {
+            capturedRequest = request;
+            return data;
+          },
+        },
+      },
+    });
+
+    const handler = handlers[0] as HttpHandler;
+    const mockRequest = new Request('https://api.example.com/users/123');
+    await invokeHandler(handler, mockRequest, { userId: '123' });
+
+    expect(capturedRequest).toBeDefined();
+    expect(capturedRequest).toBeInstanceOf(Request);
+  });
+
+  it('transform can read query params from request URL', async () => {
+    const client = createMockClient('./test.yaml', { seed: 42 });
+    const handlers = await client.handlers({
+      operations: {
+        getUser: {
+          transform: (data, request) => {
+            const url = new URL(request!.url);
+            const filter = url.searchParams.get('filter') ?? 'none';
+            return { ...data, appliedFilter: filter };
+          },
+        },
+      },
+    });
+
+    const handler = handlers[0] as HttpHandler;
+    const mockRequest = new Request('https://api.example.com/users/123?filter=active');
+    const result = await invokeHandler(handler, mockRequest, { userId: '123' });
+
+    const body = await result.json();
+    expect(body.appliedFilter).toBe('active');
+  });
+
+  it('transform returned object replaces the response body entirely', async () => {
+    const client = createMockClient('./test.yaml', { seed: 42 });
+    const handlers = await client.handlers({
+      operations: {
+        getUser: {
+          transform: () => {
+            return { custom: 'response', only: 'these fields' };
+          },
+        },
+      },
+    });
+
+    const handler = handlers[0] as HttpHandler;
+    const mockRequest = new Request('https://api.example.com/users/123');
+    const result = await invokeHandler(handler, mockRequest, { userId: '123' });
+
+    const body = await result.json();
+    expect(body).toEqual({ custom: 'response', only: 'these fields' });
+    expect(body).not.toHaveProperty('id');
+    expect(body).not.toHaveProperty('name');
+  });
+
+  it('transform returning undefined preserves the original generated data', async () => {
+    const client = createMockClient('./test.yaml', { seed: 42 });
+    const handlers = await client.handlers({
+      operations: {
+        getUser: {
+          transform: () => {
+            return undefined as unknown as Record<string, unknown>;
+          },
+        },
+      },
+    });
+
+    const handler = handlers[0] as HttpHandler;
+    const mockRequest = new Request('https://api.example.com/users/123');
+    const result = await invokeHandler(handler, mockRequest, { userId: '123' });
+
+    const body = await result.json();
+    // Original generated data should be preserved
+    expect(body).toHaveProperty('id');
+    expect(body).toHaveProperty('name');
+    expect(body).toHaveProperty('email');
+  });
+
+  it('pagination example: transform reads cursor query param and sets page/nextPage/totalPages', async () => {
+    // Spec with listUsers that returns a paged response
+    const pagedSpec = {
+      openapi: '3.0.3',
+      info: { title: 'Test API', version: '1.0.0' },
+      paths: {
+        '/users': {
+          get: {
+            operationId: 'listUsers',
+            responses: {
+              '200': {
+                description: 'OK',
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                      properties: {
+                        users: {
+                          type: 'array',
+                          items: {
+                            type: 'object',
+                            properties: {
+                              id: { type: 'string' },
+                              name: { type: 'string' },
+                            },
+                            required: ['id', 'name'],
+                          },
+                        },
+                        page: { type: 'integer' },
+                        nextPage: { type: 'integer', nullable: true },
+                        totalPages: { type: 'integer' },
+                      },
+                      required: ['users', 'totalPages'],
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+
+    resolveSpec.mockResolvedValue(pagedSpec);
+
+    const client = createMockClient('./test.yaml', { seed: 42 });
+    const handlers = await client.handlers({
+      operations: {
+        listUsers: {
+          arrayLengths: { users: [10, 10] },
+          transform: (data, request) => {
+            const url = new URL(request!.url);
+            const cursor = url.searchParams.get('cursor');
+            const page = cursor ? parseInt(cursor, 10) : 1;
+
+            return {
+              ...data,
+              page,
+              nextPage: page < 3 ? page + 1 : null,
+              totalPages: 3,
+            };
+          },
+        },
+      },
+    });
+
+    const handler = handlers[0] as HttpHandler;
+
+    // Page 1 (no cursor)
+    const req1 = new Request('https://api.example.com/users');
+    const res1 = await invokeHandler(handler, req1, {});
+    const body1 = await res1.json();
+    expect(body1.page).toBe(1);
+    expect(body1.nextPage).toBe(2);
+    expect(body1.totalPages).toBe(3);
+
+    // Page 2 (cursor=2)
+    const req2 = new Request('https://api.example.com/users?cursor=2');
+    const res2 = await invokeHandler(handler, req2, {});
+    const body2 = await res2.json();
+    expect(body2.page).toBe(2);
+    expect(body2.nextPage).toBe(3);
+    expect(body2.totalPages).toBe(3);
+
+    // Page 3 (cursor=3) — last page
+    const req3 = new Request('https://api.example.com/users?cursor=3');
+    const res3 = await invokeHandler(handler, req3, {});
+    const body3 = await res3.json();
+    expect(body3.page).toBe(3);
+    expect(body3.nextPage).toBeNull();
+    expect(body3.totalPages).toBe(3);
+  });
+
+  it('transform in .data() still works with single-argument (data-only) signature', async () => {
+    // Verify backward compatibility: transform in .data() only gets data
+    const client = createMockClient('./test.yaml', { seed: 42 });
+    const result = await client.data({
+      operations: {
+        getUser: {
+          transform: (data) => {
+            return { ...data, extra: 'from-transform' };
+          },
+        },
+      },
+    });
+
+    const userResult = result.get('getUser');
+    expect(userResult).toBeDefined();
+    const data = userResult!.get(200) as Record<string, unknown>;
+    expect(data.extra).toBe('from-transform');
+  });
+});

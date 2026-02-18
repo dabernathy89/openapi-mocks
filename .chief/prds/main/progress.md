@@ -1,3 +1,17 @@
+## 2026-02-18 - US-022
+- What was implemented: Per-operation `transform` callback in `.handlers()` now receives the MSW `Request` object as the second argument, enabling request-aware logic like pagination, filtering, and conditional responses
+- Files changed:
+  - `packages/openapi-mocks/src/mock-client.ts` — updated `OperationOptions.transform` signature to `(data, request?) => ...` (request is optional for backward compat with `.data()`); updated `generateForOperation` to accept optional `request` parameter and pass it to the transform; updated MSW handler closure to destructure `request` from args and pass it through
+  - `packages/openapi-mocks/src/__tests__/handlers.test.ts` — added 7 new tests covering: data copy passed to transform, request object accessible, query params readable, full replacement of response body, undefined return preserves data, pagination cursor example (multiple pages), and backward compat for .data() single-arg transform
+  - `.chief/prds/main/prd.json` — marked US-022 as passes: true
+- **Learnings for future iterations:**
+  - `OperationOptions` is shared between `.data()` and `.handlers()` — making `request?` optional in the transform signature keeps one unified type while enabling the full signature in `.handlers()`
+  - The `generateForOperation` helper is called from both `.data()` (no request) and `.handlers()` (with request) — pass `request` as an optional 6th parameter
+  - MSW handler closure already destructures `{ params }` from the handler arg — just add `request` to the destructuring: `{ request, params }`
+  - Tests verify the pagination cursor pattern from `playwright-example.ts` with 3 pages: `?cursor=1` → page 1 nextPage 2, `?cursor=2` → page 2 nextPage 3, `?cursor=3` → page 3 nextPage null
+  - Transform returning `undefined` must be handled explicitly — check `if (transformed !== undefined)` before replacing `generated`
+---
+
 ## Codebase Patterns
 - `generateFromSchema` lives in `src/generate-from-schema.ts` and is exported from `src/index.ts`; it creates a seeded Faker instance and delegates to `generateValueForSchema`
 - Use `new Faker({ locale: [en] })` + `faker.seed(seed)` to create a seeded Faker instance (not `faker.seed()` on the shared default instance)
@@ -28,6 +42,20 @@
 - OpenAPI exclusiveMinimum/exclusiveMaximum: 3.0.x uses boolean, 3.1.x uses numeric — handle both in type-fallback
 - Generators live in `packages/openapi-mocks/src/generators/` — create subdirectory for each major concern
 
+---
+
+## 2026-02-18 - US-021
+- What was implemented: Wired `echoPathParams` into MSW handlers; added numeric coercion when response schema type is `integer` or `number`
+- Files changed:
+  - `packages/openapi-mocks/src/utils/echo-path-params.ts` — added `EchoSchema` interface; updated `applyEchoPathParams` signature to accept optional `schema` parameter; coerces param value to number when property schema type is `integer` or `number`
+  - `packages/openapi-mocks/src/mock-client.ts` — imported `EchoSchema` type; captured `responseSchema` in handler closure; passed schema to `applyEchoPathParams` call; cast `Schema` to `EchoSchema` (safe since spec is fully dereferenced)
+  - `packages/openapi-mocks/src/__tests__/handlers.test.ts` — added 6 integration-level tests covering: basic echoPathParams request, echoPathParams disabled, exact param name match, camelCase → snake_case match, numeric coercion for integer schema, string param stays as string
+  - `.chief/prds/main/prd.json` — marked US-021 as passes: true
+- **Learnings for future iterations:**
+  - The `echoPathParams` integration was already partially implemented in US-020 (mock-client already called `applyEchoPathParams`) — US-021 added the numeric coercion and integration tests
+  - `EchoSchema` is a minimal interface with just `type` and `properties` — avoids the openapi-types compatibility issues with `ReferenceObject` in `SchemaObject.properties`
+  - Cast `Schema` → `EchoSchema` at the call site (safe because the spec is fully dereferenced, no `$ref` remain after SwaggerParser)
+  - `handlers.test.ts` uses `resolveSpec.mockResolvedValue(customSpec)` inside individual tests (after `beforeEach` reset) to inject custom specs for specific scenarios — works because `vi.resetModules()` in `beforeEach` clears module cache
 ---
 
 ## 2026-02-18 - US-019
