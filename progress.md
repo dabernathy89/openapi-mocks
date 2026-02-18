@@ -7,6 +7,8 @@
 - Root tsconfig includes `"types": ["node"]` and root has `@types/node` — needed because vite.config.ts files are picked up by root typecheck and require Node globals
 - `pnpm-workspace.yaml` `onlyBuiltDependencies: [esbuild]` allows esbuild postinstall script (required for Vite to work)
 - Vite config uses `new URL('src/index.ts', import.meta.url).pathname` instead of `__dirname` (ESM-native approach, no `node:path` import needed)
+- `@apidevtools/swagger-parser` exports as CJS default (`export = SwaggerParser`) — use `import SwaggerParser from '...'` (default import) in TS files; Vitest mocking: `vi.mock(...)` + `(await import(...)).default.dereference`
+- In Vitest tests that mock modules, use dynamic `await import('../parser.js')` after setting up mocks so the module resolves with the mock in place
 
 ---
 
@@ -57,4 +59,18 @@
   - `vitest run` (not `vitest`) is the correct non-interactive script for CI/package scripts
   - Separate `vitest.config.ts` keeps concerns clean — no need to merge into vite.config.ts
   - Root `pnpm -r test` automatically picks up the package test script without any root config changes
+---
+
+## 2026-02-18 - US-004
+- What was implemented: OpenAPI spec input parsing and resolution module
+- Files changed:
+  - `packages/openapi-mocks/src/parser.ts` — `resolveSpec(input: SpecInput)` async function; handles URL strings, JSON strings, file path strings, and plain objects; validates result is OpenAPI 3.x
+  - `packages/openapi-mocks/src/__tests__/parser.test.ts` — 8 unit tests covering all four input forms, return value, and error cases
+  - `packages/openapi-mocks/package.json` — added `@apidevtools/swagger-parser` and `openapi-types` as direct dependencies
+  - `pnpm-lock.yaml` — updated
+- **Learnings for future iterations:**
+  - `@apidevtools/swagger-parser` v12 has no `exports` field — pnpm installs it only in the local package's `node_modules`, not the root
+  - The library uses `export = SwaggerParser` (CommonJS default), so TypeScript requires `import SwaggerParser from '...'` (default import)
+  - Vitest module mocking: use `vi.mock('@apidevtools/swagger-parser', () => ({ default: { dereference: vi.fn() } }))` then re-import via dynamic `await import(...)` in each test to pick up the mock
+  - Swagger Parser's `dereference` accepts `string | OpenAPI.Document` — no need to cast Record types; just cast to `OpenAPIV3.Document | OpenAPIV3_1.Document`
 ---
