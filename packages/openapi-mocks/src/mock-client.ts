@@ -2,6 +2,7 @@ import { Faker, en } from '@faker-js/faker';
 import type { OpenAPIV3, OpenAPIV3_1 } from 'openapi-types';
 import { resolveSpec, type SpecInput } from './parser.js';
 import { generateValueForSchema, type Schema } from './generators/schema-walker.js';
+import { applyOverrides } from './utils/deep-set.js';
 
 // HTTP methods that can have operations in OpenAPI
 const HTTP_METHODS = ['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace'] as const;
@@ -271,10 +272,15 @@ export function createMockClient(spec: SpecInput, options: GlobalOptions = {}): 
           let generated = generateValueForSchema(schema, {
             faker,
             ignoreExamples,
-            overrides: operationOptions?.overrides ?? {},
+            overrides: {},
             arrayLengths: operationOptions?.arrayLengths ?? {},
             maxDepth,
           }) as Record<string, unknown>;
+
+          // Apply overrides post-generation via deep-set utility
+          if (operationOptions?.overrides && typeof generated === 'object' && generated !== null) {
+            applyOverrides(generated, operationOptions.overrides);
+          }
 
           // Apply transform if provided
           if (operationOptions?.transform && typeof generated === 'object' && generated !== null) {

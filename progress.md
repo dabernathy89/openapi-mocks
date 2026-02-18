@@ -109,3 +109,18 @@
   - Tests use `vi.mock('../parser.js')` with `beforeEach` + `vi.resetModules()` to get a fresh mock for each test — avoids cross-test state
   - The `transform` callback receives `{ ...generated }` (a shallow copy), not the internal reference
 ---
+
+## 2026-02-18 - US-018
+- What was implemented: Overrides / consumer value injection via a post-generation deep-set utility
+- Files changed:
+  - `packages/openapi-mocks/src/utils/deep-set.ts` — new file with `setByPath` and `applyOverrides` functions
+  - `packages/openapi-mocks/src/mock-client.ts` — import `applyOverrides` and apply overrides post-generation (after `generateValueForSchema`, before `transform`)
+  - `packages/openapi-mocks/src/__tests__/deep-set.test.ts` — unit tests for `setByPath` and `applyOverrides`
+  - `packages/openapi-mocks/src/__tests__/overrides.test.ts` — integration tests via `createMockClient` covering top-level, nested, array index, null, and multiple overrides
+  - `.chief/prds/main/prd.json` — marked US-018 as passes: true
+- **Learnings for future iterations:**
+  - Overrides are applied **after** `generateValueForSchema` and **before** the `transform` callback — this is the correct ordering per spec
+  - `setByPath` must check if the existing value is a non-object primitive before creating intermediates — otherwise it silently overwrites scalars with `{}` (bug caught by test)
+  - Do NOT pass `overrides` into the schema-walker's `overrides` option — this caused double-application. Pass `overrides: {}` to the walker and apply them post-generation via `applyOverrides`
+  - The utils directory `src/utils/` is the right location for standalone helper utilities not tied to a specific generator
+---
