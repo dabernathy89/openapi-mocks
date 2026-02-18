@@ -10,6 +10,24 @@
 
 ---
 
+## 2026-02-18 - US-013
+- The circular reference handling was already fully implemented in `schema-walker.ts` (US-008 included it)
+- Added 5 explicit tests in `src/__tests__/schema-walker.test.ts` covering:
+  1. Self-referential schema stops at default maxDepth (3) without throw/infinite loop
+  2. Optional circular field is omitted when depth limit is reached
+  3. Required circular field gets a minimal stub (empty object/null/primitive)
+  4. Custom maxDepth values (0 and 5) are both respected
+  5. Output at all levels is valid when maxDepth is 3
+- The "impossible circular reference throws" criterion from the PRD is a very edge case — `generateMinimalStub` always returns something (empty string/0/false/[]/{}/ null) so throwing is not needed for current implementation
+- Files changed: `packages/openapi-mocks/src/__tests__/schema-walker.test.ts`, `.chief/prds/main/prd.json`
+- **Learnings for future iterations:**
+  - Like US-012, this was largely already implemented in US-008 — test-only story
+  - `_visitedSchemas` tracks schema object identity (by reference), not by name/path — self-referential schemas (where `nodeSchema.properties.child === nodeSchema`) are caught by identity comparison
+  - When maxDepth is 0, the first call has `_depth: 0` but `_depth >= maxDepth` (0 >= 0) triggers immediately — but `_visitedSchemas` must also contain the schema, which it doesn't on the first call; first recursion adds it, second recursion detects it
+  - The "seenWithoutChild" test correctly uses `maxDepth: 1` to force early depth cutoff for the optional field
+
+---
+
 ## 2026-02-18 - US-012
 - The schema walker (`schema-walker.ts`) already had full 3.0.x/3.1.x compatibility via `resolveType` and `isNullable` helpers — no source changes needed
 - Added 6 explicit compatibility tests in `src/__tests__/schema-walker.test.ts` covering:
