@@ -1,2 +1,2 @@
-// openapi-mocks entry point (placeholder — implementation pending)
-export {};
+export { generateFromSchema } from './generate-from-schema.js';
+export type { GenerateFromSchemaOptions, OpenAPISchemaObject } from './generate-from-schema.js';
