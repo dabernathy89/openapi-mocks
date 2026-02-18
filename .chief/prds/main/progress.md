@@ -10,6 +10,23 @@
 
 ---
 
+## 2026-02-18 - US-012
+- The schema walker (`schema-walker.ts`) already had full 3.0.x/3.1.x compatibility via `resolveType` and `isNullable` helpers — no source changes needed
+- Added 6 explicit compatibility tests in `src/__tests__/schema-walker.test.ts` covering:
+  1. `nullable: true` (3.0.x) and `type: ["string", "null"]` (3.1.x) both produce null and non-null values, exclusively the base type for non-null values
+  2. `type: ["integer", "null"]` uses integer constraints (minimum/maximum) for non-null generation
+  3. `type: ["string", "null"]` produces only strings (not other types) for non-null values
+  4. 3.0.x nullable integer respects min/max for non-null generation
+  5. Sibling keywords alongside resolved `$ref` are respected (example keyword used when `ignoreExamples: false`)
+  6. 3.0.x nullable object generates valid objects when not null
+- Files changed: `packages/openapi-mocks/src/__tests__/schema-walker.test.ts`, `.chief/prds/main/prd.json`
+- **Learnings for future iterations:**
+  - US-012 was largely already implemented as part of US-008 (schema-walker) — the nullable handling code (`resolveType`, `isNullable`) was written upfront to handle both spec versions
+  - When a story's logic is already implemented but untested, just add the explicit tests — don't re-implement
+  - The "sibling keywords alongside $ref" concern for 3.1.x is addressed at parse time by Swagger Parser; the walker naturally preserves all schema keys (it reads what's there, doesn't filter keywords)
+
+---
+
 ## 2026-02-18 - US-011
 - Implemented `generateAnyOf(subSchemas, options)` in `src/generators/schema-walker.ts`
 - Added `anyOf` handling in `generateValueForSchema` — detects `anyOf`, calls `generateAnyOf`
