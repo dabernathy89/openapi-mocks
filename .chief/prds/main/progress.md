@@ -1,3 +1,28 @@
+## 2026-02-18 - US-029
+- What was implemented: Self-contained Playwright E2E example project in `examples/playwright/`
+- Files changed:
+  - `examples/playwright/specs/acme-api.yaml` — OpenAPI 3.1 spec with `listUsers`, `getUser`, `createUser` operations; includes `User`, `UserDetail`, `Address`, `ValidationError` schemas
+  - `examples/playwright/app/index.html` — Static SPA demo app with data-testid attributes for Playwright selectors
+  - `examples/playwright/app/app.js` — SPA router (no framework) with fetch-based API calls using `/api/v1` same-origin relative URLs
+  - `examples/playwright/server.js` — Minimal static file server (Node http module) serving from the project root; SPA fallback to index.html
+  - `examples/playwright/playwright.config.ts` — Playwright config with Chromium project and webServer pointing at server.js
+  - `examples/playwright/e2e/users-list.spec.ts` — Tests: exact user count, nested addresses, seeded determinism, pagination with cursor
+  - `examples/playwright/e2e/user-detail.spec.ts` — Tests: path-param echoing, per-operation transform, 422 validation error, ignoreExamples
+  - `examples/playwright/package.json` — Standalone package (not workspace member); `openapi-mocks: file:../../packages/openapi-mocks` local dep
+  - `examples/playwright/tsconfig.json` — TypeScript config with `module: NodeNext` for the test files
+  - `examples/playwright/.gitignore` — Ignores node_modules, test-results, playwright-report
+  - `examples/playwright/README.md` — Explains setup, patterns, and usage
+  - `.chief/prds/main/prd.json` — marked US-029 as passes: true
+- **Learnings for future iterations:**
+  - The static server must serve from `__dirname` (project root), not `__dirname/app` — otherwise `/app/app.js` maps to `app/app/app.js` which doesn't exist and silently falls back to index.html, breaking the SPA
+  - Use same-origin relative URLs in the app (`/api/v1/...`) rather than absolute external URLs (`https://api.acme.dev/v1/...`) — Playwright's `page.route("**/api/v1/users")` glob pattern matches same-origin requests reliably
+  - `addresses` is an optional field in the User schema — the ~50/50 random omission means some generated users have no addresses; tests relying on this field must use a `transform` to guarantee it's present, or assert differently
+  - `pnpm install --ignore-workspace` is needed when running from within a subdirectory of a pnpm monorepo that's not a workspace member — otherwise pnpm treats the command as workspace-scoped and doesn't install local deps
+  - Playwright browsers (Chromium) must be installed separately with `playwright install --with-deps chromium` before tests can run
+  - The `pnpm exec playwright test` command doesn't work from a non-workspace directory due to pnpm's recursive exec behavior — use the binary directly: `node_modules/.bin/playwright test`
+  - In the `package.json` scripts, use `"test": "playwright test"` which works when pnpm runs the script from the correct cwd
+---
+
 ## 2026-02-18 - US-028
 - What was implemented: Finalized TypeScript public API barrel exports and type definitions
 - Files changed:
@@ -105,6 +130,8 @@
 ---
 
 ## Codebase Patterns
+- `examples/playwright/` is a standalone project (not workspace member); install with `pnpm install --ignore-workspace` from its directory; run tests via `node_modules/.bin/playwright test`
+- Static server for examples must serve from the project root directory so `/app/app.js` resolves correctly; do NOT set base to `app/` subdirectory
 - `generateFromSchema` lives in `src/generate-from-schema.ts` and is exported from `src/index.ts`; it creates a seeded Faker instance and delegates to `generateValueForSchema`
 - Use `new Faker({ locale: [en] })` + `faker.seed(seed)` to create a seeded Faker instance (not `faker.seed()` on the shared default instance)
 - Tests live in `packages/openapi-mocks/src/__tests__/` and import with `.js` extension (e.g., `'../generators/smart-defaults.js'`)
