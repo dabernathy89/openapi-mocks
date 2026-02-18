@@ -44,3 +44,17 @@
   - Vite 7 no longer shows "types condition order" warning once `types` is first in the exports map — put `types` before `import` and `require`
   - `vite-plugin-dts` generates `.d.ts` and `.d.ts.map` files alongside the JS output automatically
 ---
+
+## 2026-02-18 - US-003
+- What was implemented: Configured Vitest for the library package with a smoke test
+- Files changed:
+  - `packages/openapi-mocks/vitest.config.ts` — Vitest config with `include` pattern for `src/**/*.test.ts` and `src/__tests__/**/*.test.ts`
+  - `packages/openapi-mocks/src/__tests__/smoke.test.ts` — trivial smoke test asserting `true === true`
+  - `packages/openapi-mocks/package.json` — added `test` script (`vitest run`) and `vitest` devDependency
+  - `pnpm-lock.yaml` — updated with vitest and dependencies
+- **Learnings for future iterations:**
+  - Vitest version 3.x is current (vitest@^3.2.4 installed fine)
+  - `vitest run` (not `vitest`) is the correct non-interactive script for CI/package scripts
+  - Separate `vitest.config.ts` keeps concerns clean — no need to merge into vite.config.ts
+  - Root `pnpm -r test` automatically picks up the package test script without any root config changes
+---
