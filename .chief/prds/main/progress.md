@@ -10,6 +10,38 @@
 
 ---
 
+## 2026-02-18 - US-011
+- Implemented `generateAnyOf(subSchemas, options)` in `src/generators/schema-walker.ts`
+- Added `anyOf` handling in `generateValueForSchema` — detects `anyOf`, calls `generateAnyOf`
+- Randomly selects 1 to N sub-schemas (seeded) using `faker.helpers.shuffle` then slicing
+- When a single sub-schema is selected, generates directly; when multiple, merges via existing `mergeAllOf` then generates
+- Added 4 tests in `src/__tests__/schema-walker.test.ts` covering: always selects at least one, single sub-schema selection, multi-schema merge (all properties present), varied output across seeds
+- Files changed: `packages/openapi-mocks/src/generators/schema-walker.ts`, `packages/openapi-mocks/src/__tests__/schema-walker.test.ts`
+- **Learnings for future iterations:**
+  - `anyOf` is inserted after `oneOf` in the composition block, before type-based generation
+  - `faker.helpers.shuffle` on a copy of the array provides seeded shuffling; slicing from the front gives a seeded random subset
+  - Reuses `mergeAllOf` for the multi-schema merge case — no new merge logic needed
+  - When merging conflicting-type schemas from `anyOf`, the same `mergeAllOf` error applies (conflicting types throw)
+
+---
+
+## 2026-02-18 - US-010
+- Implemented `generateOneOf(subSchemas, parentSchema, options)` in `src/generators/schema-walker.ts`
+- Added `oneOf` handling in `generateValueForSchema` — detects `oneOf`, calls `generateOneOf`
+- Without discriminator: randomly selects one sub-schema (seeded)
+- With discriminator + mapping: selects based on mapping entry (random from mapping keys, seeded)
+- With discriminator + no mapping: randomly selects sub-schema, then reads `enum[0]` or `const` from the discriminator property to set the output value
+- Sets discriminator property value in generated object when enum/const is found
+- Added 5 tests in `src/__tests__/schema-walker.test.ts` covering: random selection without discriminator, discriminator with mapping (mapping via propertyName), discriminator property value from enum, discriminator property value from const, various sub-schema types
+- Files changed: `packages/openapi-mocks/src/generators/schema-walker.ts`, `packages/openapi-mocks/src/__tests__/schema-walker.test.ts`
+- **Learnings for future iterations:**
+  - `oneOf` is inserted in the composition block after `allOf`, before type-based generation
+  - `generateOneOf` mutates the generated result object to set the discriminator property value — works because `generateValueForSchema` for object schemas returns a plain object
+  - When `$ref`-based discriminator mapping is used (real-world spec with resolved refs), the sub-schemas won't have `$ref` keys after dereference — the mapping is mainly informational post-dereference; implement as "select randomly from oneOf" with mapping as display-only
+  - Discriminator property value is extracted from the selected sub-schema's properties object at `properties[discriminatorPropName].enum[0]` or `.const`
+
+---
+
 ## 2026-02-18 - US-009
 - Implemented `mergeAllOf(subSchemas)` exported function in `src/generators/schema-walker.ts`
 - `mergeAllOf` deep-merges allOf sub-schemas: combines `properties`, unions `required` arrays, validates compatible types
