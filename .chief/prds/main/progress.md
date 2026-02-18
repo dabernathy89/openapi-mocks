@@ -1,3 +1,19 @@
+## 2026-02-18 - US-024
+- What was implemented: Dedicated test suite for default status code selection logic; the underlying `selectStatusCodes` function was already fully implemented in `mock-client.ts` as part of US-016. Added 13 unit tests covering all acceptance criteria.
+- Files changed:
+  - `packages/openapi-mocks/src/__tests__/status-code-selection.test.ts` — new file with 13 tests organized into 4 describe blocks:
+    1. "default: lowest 2xx" — picks 200 over 201 when both defined, picks 201 as lowest 2xx when only 201+422, returns exactly one code by default
+    2. "no 2xx response defined" — skips operation, emits console.warn naming operation and mentioning "2xx", does not throw
+    3. "per-operation statusCode override" — selects the specified code, can target non-2xx, warns and skips when specified code not in spec
+    4. "global statusCodes filter" — generates all matching codes, only includes spec-defined codes, can target 4xx globally, generated data matches schema
+  - `.chief/prds/main/prd.json` — marked US-024 as passes: true
+- **Learnings for future iterations:**
+  - The `selectStatusCodes` function was already fully implemented as part of US-016 — US-024 was test-only
+  - Create a dedicated spec fixture for status-code testing that clearly covers: both 200+201 (to test lowest-wins), only 4xx (to test no-2xx skipping), 201+422 (to test per-operation override), 200+404+500 (to test global filter)
+  - Vitest `vi.spyOn(console, 'warn').mockImplementation(() => {})` + `.mockRestore()` cleanly suppresses and captures warnings
+  - The "warn mentions 2xx" assertion uses `/2xx|no 2xx/i` regex to be resilient to minor wording changes
+---
+
 ## 2026-02-18 - US-023
 - What was implemented: Non-JSON content type handling — skips operations with no `application/json` response, emits `console.warn` naming the operationId and content types found; generates JSON variant for mixed-content operations; also fixed pre-existing root typecheck errors in `handlers.test.ts`
 - Files changed:
