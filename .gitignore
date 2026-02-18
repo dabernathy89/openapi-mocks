@@ -30,8 +30,12 @@ coverage/
 vitest.coverage/
 
 # Astro
+.astro/
 docs/.astro/
 docs/dist/
+
+# Turbo
+.turbo/
 
 # Environment
 .env

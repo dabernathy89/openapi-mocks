@@ -17,7 +17,8 @@
         "Typecheck passes at root level"
       ],
       "priority": 1,
-      "passes": false
+      "passes": false,
+      "inProgress": true
     },
     {
       "id": "US-002",
