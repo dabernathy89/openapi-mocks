@@ -253,6 +253,12 @@ export function generateValueForSchema(schema: Schema, options: GenerateValueOpt
     return generateValueForSchema(merged, { ...baseOptions, propertyName, _overridePath });
   }
 
+  // --- oneOf composition: select one sub-schema (with discriminator support) ---
+  const oneOf = (schema as Record<string, unknown>)['oneOf'] as Schema[] | undefined;
+  if (oneOf && oneOf.length > 0) {
+    return generateOneOf(oneOf, schema, { ...baseOptions, propertyName, _overridePath });
+  }
+
   // --- Priority 5: Type-based generation ---
   const type = resolveType(schema);
 
@@ -266,6 +272,73 @@ export function generateValueForSchema(schema: Schema, options: GenerateValueOpt
 
   // For simple types, delegate to type fallback
   return generateFromTypeFallback(schema as OpenAPIV3.SchemaObject, faker);
+}
+
+/**
+ * Generate a value for a oneOf schema.
+ * Selects one sub-schema randomly (seeded), or uses the discriminator if present.
+ */
+function generateOneOf(
+  subSchemas: Schema[],
+  parentSchema: Schema,
+  options: GenerateValueOptions & { propertyName?: string; _overridePath?: string },
+): unknown {
+  const { faker = defaultFaker } = options;
+
+  const discriminator = (parentSchema as Record<string, unknown>)['discriminator'] as
+    | { propertyName?: string; mapping?: Record<string, string> }
+    | undefined;
+
+  let selectedSchema: Schema;
+  let discriminatorValue: string | undefined;
+
+  if (discriminator?.propertyName && discriminator.mapping) {
+    // With mapping: pick a random entry from the mapping (seeded)
+    const mappingEntries = Object.entries(discriminator.mapping);
+    const [, selectedRef] = mappingEntries[faker.number.int({ min: 0, max: mappingEntries.length - 1 })]!;
+    discriminatorValue = Object.keys(discriminator.mapping)[
+      mappingEntries.findIndex(([, ref]) => ref === selectedRef)
+    ];
+
+    // Find the sub-schema that matches the ref (by identity or by $ref string)
+    const matched = subSchemas.find((s) => {
+      const ref = (s as Record<string, unknown>)['$ref'];
+      if (typeof ref === 'string') return ref === selectedRef;
+      return false;
+    });
+    selectedSchema = matched ?? subSchemas[faker.number.int({ min: 0, max: subSchemas.length - 1 })]!;
+  } else {
+    // No mapping: select randomly (seeded)
+    selectedSchema = subSchemas[faker.number.int({ min: 0, max: subSchemas.length - 1 })]!;
+
+    // If there's a propertyName but no mapping, try to get the discriminator value from enum/const
+    if (discriminator?.propertyName) {
+      const props = (selectedSchema as Record<string, unknown>)['properties'] as
+        | Record<string, Record<string, unknown>>
+        | undefined;
+      const discriminatorProp = props?.[discriminator.propertyName];
+      if (discriminatorProp) {
+        const enumValues = discriminatorProp['enum'] as unknown[] | undefined;
+        if (enumValues && enumValues.length > 0) {
+          discriminatorValue = String(enumValues[0]);
+        }
+        const constValue = discriminatorProp['const'];
+        if (constValue !== undefined) {
+          discriminatorValue = String(constValue);
+        }
+      }
+    }
+  }
+
+  // Generate data for the selected schema
+  const generated = generateValueForSchema(selectedSchema, options) as Record<string, unknown>;
+
+  // If we have a discriminator property and value, set it in the output
+  if (discriminator?.propertyName && discriminatorValue !== undefined && typeof generated === 'object' && generated !== null) {
+    generated[discriminator.propertyName] = discriminatorValue;
+  }
+
+  return generated;
 }
 
 /**

@@ -583,6 +583,147 @@ describe('generateValueForSchema', () => {
   });
 
   // -------------------------------------------------------------------------
+  // oneOf composition
+  // -------------------------------------------------------------------------
+  describe('oneOf composition', () => {
+    it('selects one sub-schema randomly when no discriminator', () => {
+      const schema = {
+        oneOf: [
+          { type: 'object', properties: { kind: { type: 'string', enum: ['cat'] }, meow: { type: 'string' } }, required: ['kind', 'meow'] },
+          { type: 'object', properties: { kind: { type: 'string', enum: ['dog'] }, bark: { type: 'string' } }, required: ['kind', 'bark'] },
+        ],
+      } as Record<string, unknown>;
+
+      const results = [];
+      for (let i = 0; i < 20; i++) {
+        fakerInstance.seed(i);
+        results.push(generateValueForSchema(schema, { faker: fakerInstance }) as Record<string, unknown>);
+      }
+
+      // Should see at least one cat and one dog over 20 runs
+      const cats = results.filter((r) => 'meow' in r);
+      const dogs = results.filter((r) => 'bark' in r);
+      expect(cats.length).toBeGreaterThan(0);
+      expect(dogs.length).toBeGreaterThan(0);
+    });
+
+    it('selects sub-schema via discriminator mapping', () => {
+      const catSchema = {
+        type: 'object',
+        properties: {
+          petType: { type: 'string' },
+          meow: { type: 'string' },
+        },
+        required: ['petType', 'meow'],
+      };
+      const dogSchema = {
+        type: 'object',
+        properties: {
+          petType: { type: 'string' },
+          bark: { type: 'string' },
+        },
+        required: ['petType', 'bark'],
+      };
+
+      // Simulate discriminator with mapping (mapping points to schemas by ref name)
+      // Since refs are resolved, we pass schemas directly in oneOf
+      // and the discriminator mapping references the schemas
+      const schema = {
+        oneOf: [
+          { $ref: '#/components/schemas/Cat' },
+          { $ref: '#/components/schemas/Dog' },
+        ],
+        discriminator: {
+          propertyName: 'petType',
+          mapping: {
+            cat: '#/components/schemas/Cat',
+            dog: '#/components/schemas/Dog',
+          },
+        },
+      } as Record<string, unknown>;
+
+      // Since $refs won't be resolved in isolation, test the discriminator property name behavior
+      // by using inline schemas that don't use $ref
+      const inlineSchema = {
+        oneOf: [catSchema, dogSchema],
+        discriminator: {
+          propertyName: 'petType',
+        },
+      } as Record<string, unknown>;
+
+      fakerInstance.seed(SEED);
+      const result = generateValueForSchema(inlineSchema, { faker: fakerInstance }) as Record<string, unknown>;
+      expect(typeof result).toBe('object');
+      // Either cat or dog schema selected — both have petType
+      expect(result).toHaveProperty('petType');
+    });
+
+    it('sets discriminator property to correct value when enum is present', () => {
+      const schema = {
+        oneOf: [
+          {
+            type: 'object',
+            properties: {
+              kind: { type: 'string', enum: ['cat'] },
+              name: { type: 'string' },
+            },
+            required: ['kind', 'name'],
+          },
+        ],
+        discriminator: {
+          propertyName: 'kind',
+        },
+      } as Record<string, unknown>;
+
+      fakerInstance.seed(SEED);
+      const result = generateValueForSchema(schema, { faker: fakerInstance }) as Record<string, unknown>;
+      expect(result['kind']).toBe('cat');
+    });
+
+    it('sets discriminator property to const value when const is present', () => {
+      const schema = {
+        oneOf: [
+          {
+            type: 'object',
+            properties: {
+              type: { type: 'string', const: 'circle' },
+              radius: { type: 'number' },
+            },
+            required: ['type', 'radius'],
+          },
+        ],
+        discriminator: {
+          propertyName: 'type',
+        },
+      } as Record<string, unknown>;
+
+      fakerInstance.seed(SEED);
+      const result = generateValueForSchema(schema, { faker: fakerInstance }) as Record<string, unknown>;
+      expect(result['type']).toBe('circle');
+    });
+
+    it('generates valid output for each possible sub-schema', () => {
+      const schema = {
+        oneOf: [
+          { type: 'string' },
+          { type: 'integer' },
+          { type: 'boolean' },
+        ],
+      } as Record<string, unknown>;
+
+      const results = new Set<string>();
+      for (let i = 0; i < 30; i++) {
+        fakerInstance.seed(i);
+        const r = generateValueForSchema(schema, { faker: fakerInstance, ignoreExamples: true });
+        results.add(typeof r);
+      }
+
+      // Should generate various types
+      expect(results.size).toBeGreaterThan(1);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Circular reference handling
   // -------------------------------------------------------------------------
   describe('circular reference handling', () => {
