@@ -1,4 +1,6 @@
 ## Codebase Patterns
+- `generateFromSchema` lives in `src/generate-from-schema.ts` and is exported from `src/index.ts`; it creates a seeded Faker instance and delegates to `generateValueForSchema`
+- Use `new Faker({ locale: [en] })` + `faker.seed(seed)` to create a seeded Faker instance (not `faker.seed()` on the shared default instance)
 - Tests live in `packages/openapi-mocks/src/__tests__/` and import with `.js` extension (e.g., `'../generators/smart-defaults.js'`)
 - Source files use ESM; Vitest is configured in the package
 - Run `pnpm test` from `packages/openapi-mocks/` for tests, `pnpm exec tsc --noEmit` for typecheck
@@ -7,6 +9,21 @@
 - Schema walker (`schema-walker.ts`) uses `_overridePath` internal option for dot-path override matching; pass it when recursing to track current path
 - Optional fields use `faker.datatype.boolean()` for ~50/50 omission; overrides force inclusion by checking if any override key starts with `${propPath}`
 - Circular ref detection uses `_visitedSchemas: Set<object>` (by identity) combined with `_depth` vs `maxDepth`
+
+---
+
+## 2026-02-18 - US-015
+- Implemented `generateFromSchema(schema, options)` in `src/generate-from-schema.ts`
+- Creates a new seeded Faker instance (`new Faker({ locale: [en] })`) when a seed is provided, delegates to `generateValueForSchema` from schema-walker
+- Options supported: `seed`, `ignoreExamples`, `overrides`, `arrayLengths`, `maxDepth`
+- Exported `generateFromSchema` and `GenerateFromSchemaOptions` from `src/index.ts`
+- Added 20 tests in `src/__tests__/generate-from-schema.test.ts` covering: basic object, determinism with seed, oneOf with discriminator, arrays with constraints, nullable/optional fields, `ignoreExamples`, `overrides`, primitive types, `allOf`, `anyOf`, and circular ref handling
+- Files changed: `packages/openapi-mocks/src/generate-from-schema.ts` (new), `packages/openapi-mocks/src/index.ts`, `packages/openapi-mocks/src/__tests__/generate-from-schema.test.ts` (new), `.chief/prds/main/prd.json`
+- **Learnings for future iterations:**
+  - The public API is a thin wrapper: create a Faker instance with the user's seed, then call the internal `generateValueForSchema`
+  - Use `new Faker({ locale: [en] })` + `faker.seed(seed)` rather than mutating the shared default Faker instance — avoids cross-test contamination
+  - `src/index.ts` was previously a stub (`export {}`); now it exports the public API — future stories should add their exports here too
+  - The test for "nullable bio can be null" uses 30 seeds and asserts at least one is null — robust without being flaky
 
 ---
 

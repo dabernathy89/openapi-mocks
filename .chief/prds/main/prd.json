@@ -250,8 +250,8 @@
         "Typecheck passes"
       ],
       "priority": 15,
-      "passes": false,
-      "inProgress": true
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-016",
