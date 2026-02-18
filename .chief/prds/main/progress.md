@@ -10,6 +10,20 @@
 
 ---
 
+## 2026-02-18 - US-009
+- Implemented `mergeAllOf(subSchemas)` exported function in `src/generators/schema-walker.ts`
+- `mergeAllOf` deep-merges allOf sub-schemas: combines `properties`, unions `required` arrays, validates compatible types
+- Added `allOf` handling in `generateValueForSchema` — detects `allOf`, merges sub-schemas, recursively generates merged schema
+- Throws descriptive error with `/conflicting types/` when sub-schemas have incompatible `type` values
+- Added 7 tests in `src/__tests__/schema-walker.test.ts` covering: two objects merged, required arrays unioned, properties from each sub-schema present, conflicting types throw, mergeAllOf unit tests (compatible types, conflicting types, no duplicate required entries)
+- Files changed: `packages/openapi-mocks/src/generators/schema-walker.ts`, `packages/openapi-mocks/src/__tests__/schema-walker.test.ts`
+- **Learnings for future iterations:**
+  - `allOf` is handled before the type-based fallback block — insert it after smart-defaults check, using `{ ...baseOptions, propertyName, _overridePath }` when recursing into the merged schema
+  - `mergeAllOf` uses `Object.assign` for property merging (last-wins for duplicate keys) and deduplicates required entries with `includes` check
+  - Export `mergeAllOf` so tests can unit-test the merge logic independently from generation
+
+---
+
 ## 2026-02-18 - US-008
 - Implemented `generateValueForSchema(schema, options)` in `src/generators/schema-walker.ts`
 - Full priority chain: overrides → spec example/default → x-faker-method → smart defaults → type fallback
