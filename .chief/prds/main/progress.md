@@ -1,3 +1,19 @@
+## 2026-02-18 - US-025
+- What was implemented: Integration tests against real-world OpenAPI specs (Petstore and GitHub subset)
+- Files changed:
+  - `packages/openapi-mocks/src/__tests__/fixtures/petstore.yaml` — Standard OpenAPI 3.0.3 Petstore spec with 3 operations: `listPets`, `createPets`, `showPetById`
+  - `packages/openapi-mocks/src/__tests__/fixtures/github-subset.yaml` — GitHub API subset with 5 operations: `listUsers`, `getUser`, `listUserRepos`, `getRepo`, `listIssues`
+  - `packages/openapi-mocks/src/__tests__/integration.test.ts` — 30+ integration tests covering: no errors thrown, all operations produce output, expected shapes, handler count, handler URLs, handler invocation, snapshot regression
+  - `packages/openapi-mocks/src/__tests__/__snapshots__/integration.test.ts.snap` — auto-generated Vitest snapshot file with 4 snapshots
+  - `.chief/prds/main/prd.json` — marked US-025 as passes: true
+- **Learnings for future iterations:**
+  - `faker.date.past()` and `faker.date.recent()` are relative to `Date.now()` — non-deterministic across days; snapshot tests should exclude date fields or use stable field assertions
+  - Smart defaults can override enum values (e.g. `state` → `location.state` overrides `enum: [open, closed]`) — be aware when testing enum outputs by name
+  - Integration tests use real file paths (not mocked parser) — `path.join(__dirname, 'fixtures/petstore.yaml')` in vitest tests
+  - MSW handlers: when response is an array, spreading with `{ ...generated }` makes array object with numeric keys — test for `status 200` and valid JSON, not for specific shape
+  - Snapshot tests with Vitest: `toMatchSnapshot()` auto-creates the `.snap` file on first run; commit the snapshot file
+---
+
 ## 2026-02-18 - US-024
 - What was implemented: Dedicated test suite for default status code selection logic; the underlying `selectStatusCodes` function was already fully implemented in `mock-client.ts` as part of US-016. Added 13 unit tests covering all acceptance criteria.
 - Files changed:
