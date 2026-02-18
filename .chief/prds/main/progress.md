@@ -1,3 +1,17 @@
+## 2026-02-18 - US-023
+- What was implemented: Non-JSON content type handling — skips operations with no `application/json` response, emits `console.warn` naming the operationId and content types found; generates JSON variant for mixed-content operations; also fixed pre-existing root typecheck errors in `handlers.test.ts`
+- Files changed:
+  - `packages/openapi-mocks/src/mock-client.ts` — updated `extractResponseSchema` to accept optional `operationId` param and include it in the warn message; updated both call sites to pass operationId
+  - `packages/openapi-mocks/src/__tests__/mock-client.test.ts` — added `/mixed-content` path to `minimalSpec` (both `application/json` and `image/png`); expanded non-JSON tests to 4: skips non-JSON op, warns with operationId and content types, generates JSON for mixed content, doesn't throw
+  - `packages/openapi-mocks/src/__tests__/handlers.test.ts` — fixed pre-existing root typecheck errors by casting `result.json()` to `Record<string, unknown>` at all call sites
+  - `.chief/prds/main/prd.json` — marked US-023 as passes: true
+- **Learnings for future iterations:**
+  - Root typecheck (strict mode) treats `Response.json()` return type as `unknown` — always cast: `const body = await result.json() as Record<string, unknown>`
+  - Package-level typecheck (vitest) is less strict than the root tsconfig — root typecheck catches more errors
+  - `extractResponseSchema` is called from both `generateForOperation` (has `operation.operationId`) and the handlers pre-check loop (has `operationId` variable) — both are easy to pass through
+  - Adding a `mixedContent` fixture to the spec with both `application/json` and `image/png` is the cleanest way to test the mixed-content scenario
+---
+
 ## 2026-02-18 - US-022
 - What was implemented: Per-operation `transform` callback in `.handlers()` now receives the MSW `Request` object as the second argument, enabling request-aware logic like pagination, filtering, and conditional responses
 - Files changed:
@@ -21,7 +35,8 @@
 - MSW handler info: `handler.info.header` contains the method+path string (e.g. "GET /users/:userId") — useful for asserting URL patterns in tests
 - OpenAPI `{param}` → MSW `:param` path conversion needed for handler URL patterns
 - Pre-check for JSON schema existence before creating MSW handler (skip operations with no JSON response content to avoid creating handlers with undefined resolvers)
-- Run `pnpm test` from `packages/openapi-mocks/` for tests, `pnpm exec tsc --noEmit` for typecheck
+- Run `pnpm test` from `packages/openapi-mocks/` for tests, `pnpm exec tsc --noEmit` for typecheck; always also run root-level `pnpm exec tsc --noEmit` (stricter)
+- Root tsconfig is stricter than package tsconfig — `Response.json()` returns `unknown` at root level; always cast: `const body = await result.json() as Record<string, unknown>`
 - `normalizeName` strips underscores and lowercases for camelCase/snake_case/case-insensitive matching
 - Faker output type conflict detection uses a `COMPATIBLE_SCHEMA_TYPES` map to skip smart defaults when schema type is incompatible
 - Schema walker (`schema-walker.ts`) uses `_overridePath` internal option for dot-path override matching; pass it when recursing to track current path
