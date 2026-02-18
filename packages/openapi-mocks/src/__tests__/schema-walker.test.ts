@@ -1,6 +1,6 @@
 import { faker as fakerInstance } from '@faker-js/faker';
 import { describe, it, expect, beforeEach } from 'vitest';
-import { generateValueForSchema } from '../generators/schema-walker.js';
+import { generateValueForSchema, mergeAllOf } from '../generators/schema-walker.js';
 
 const SEED = 42;
 
@@ -457,6 +457,128 @@ describe('generateValueForSchema', () => {
       const result2 = generateValueForSchema(schema, { faker: fakerInstance, ignoreExamples: true });
 
       expect(result1).toEqual(result2);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // allOf composition
+  // -------------------------------------------------------------------------
+  describe('allOf composition', () => {
+    it('merges two object schemas', () => {
+      const schema = {
+        allOf: [
+          {
+            type: 'object',
+            properties: { name: { type: 'string' } },
+            required: ['name'],
+          },
+          {
+            type: 'object',
+            properties: { age: { type: 'integer' } },
+            required: ['age'],
+          },
+        ],
+      } as Record<string, unknown>;
+
+      const result = generateValueForSchema(schema, { faker: fakerInstance }) as Record<string, unknown>;
+      expect(typeof result).toBe('object');
+      expect(result).not.toBeNull();
+      expect(typeof result['name']).toBe('string');
+      expect(typeof result['age']).toBe('number');
+      expect(Number.isInteger(result['age'])).toBe(true);
+    });
+
+    it('unions required arrays from all sub-schemas', () => {
+      const schema = {
+        allOf: [
+          {
+            type: 'object',
+            properties: { a: { type: 'string' }, b: { type: 'string' } },
+            required: ['a'],
+          },
+          {
+            type: 'object',
+            properties: { c: { type: 'string' } },
+            required: ['b', 'c'],
+          },
+        ],
+      } as Record<string, unknown>;
+
+      // Run many times — all required fields (a, b, c) should always be present
+      for (let i = 0; i < 20; i++) {
+        fakerInstance.seed(i);
+        const result = generateValueForSchema(schema, { faker: fakerInstance }) as Record<string, unknown>;
+        expect(result).toHaveProperty('a');
+        expect(result).toHaveProperty('b');
+        expect(result).toHaveProperty('c');
+      }
+    });
+
+    it('includes property from each sub-schema in output', () => {
+      const schema = {
+        allOf: [
+          {
+            type: 'object',
+            properties: { firstName: { type: 'string' } },
+            required: ['firstName'],
+          },
+          {
+            type: 'object',
+            properties: { lastName: { type: 'string' } },
+            required: ['lastName'],
+          },
+        ],
+      } as Record<string, unknown>;
+
+      const result = generateValueForSchema(schema, { faker: fakerInstance }) as Record<string, unknown>;
+      expect(result).toHaveProperty('firstName');
+      expect(result).toHaveProperty('lastName');
+    });
+
+    it('throws when allOf sub-schemas have conflicting types', () => {
+      const schema = {
+        allOf: [
+          { type: 'object', properties: { x: { type: 'string' } } },
+          { type: 'string' },
+        ],
+      } as Record<string, unknown>;
+
+      expect(() => generateValueForSchema(schema, { faker: fakerInstance })).toThrow(
+        /conflicting types/i,
+      );
+    });
+
+    it('mergeAllOf: compatible types are merged correctly', () => {
+      const merged = mergeAllOf([
+        { type: 'object', properties: { a: { type: 'string' } }, required: ['a'] } as Record<string, unknown>,
+        { type: 'object', properties: { b: { type: 'integer' } }, required: ['b'] } as Record<string, unknown>,
+      ]);
+
+      const m = merged as Record<string, unknown>;
+      expect(m['type']).toBe('object');
+      expect(m['properties']).toHaveProperty('a');
+      expect(m['properties']).toHaveProperty('b');
+      expect(m['required']).toEqual(expect.arrayContaining(['a', 'b']));
+    });
+
+    it('mergeAllOf: throws on conflicting types', () => {
+      expect(() =>
+        mergeAllOf([
+          { type: 'string' } as Record<string, unknown>,
+          { type: 'integer' } as Record<string, unknown>,
+        ]),
+      ).toThrow(/conflicting types/i);
+    });
+
+    it('mergeAllOf: does not duplicate required entries', () => {
+      const merged = mergeAllOf([
+        { type: 'object', properties: { a: { type: 'string' } }, required: ['a'] } as Record<string, unknown>,
+        { type: 'object', properties: { a: { type: 'string' }, b: { type: 'string' } }, required: ['a', 'b'] } as Record<string, unknown>,
+      ]);
+
+      const m = merged as Record<string, unknown>;
+      const required = m['required'] as string[];
+      expect(required.filter((r) => r === 'a').length).toBe(1);
     });
   });
 

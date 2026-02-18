@@ -110,6 +110,63 @@ function getByPath(obj: Record<string, unknown>, path: string): { found: true; v
 }
 
 /**
+ * Deep-merge allOf sub-schemas into a single combined schema.
+ * Combines `properties`, unions `required` arrays, and validates compatible types.
+ */
+export function mergeAllOf(subSchemas: Schema[]): Schema {
+  const merged: Record<string, unknown> = {};
+
+  let mergedType: string | undefined;
+  const mergedProperties: Record<string, Schema> = {};
+  const mergedRequired: string[] = [];
+
+  for (const sub of subSchemas) {
+    const s = sub as Record<string, unknown>;
+
+    // Merge type — must be compatible if both are present
+    const rawType = s['type'];
+    const subType = typeof rawType === 'string' ? rawType : undefined;
+    if (subType !== undefined) {
+      if (mergedType !== undefined && mergedType !== subType) {
+        throw new Error(
+          `openapi-mocks: allOf has conflicting types: "${mergedType}" vs "${subType}"`,
+        );
+      }
+      mergedType = subType;
+    }
+
+    // Merge properties
+    const props = s['properties'] as Record<string, Schema> | undefined;
+    if (props) {
+      Object.assign(mergedProperties, props);
+    }
+
+    // Union required arrays
+    const req = s['required'] as string[] | undefined;
+    if (req) {
+      for (const r of req) {
+        if (!mergedRequired.includes(r)) {
+          mergedRequired.push(r);
+        }
+      }
+    }
+
+    // Copy other schema keywords (example, default, x-faker-method, format, etc.)
+    for (const [key, value] of Object.entries(s)) {
+      if (key !== 'type' && key !== 'properties' && key !== 'required') {
+        merged[key] = value;
+      }
+    }
+  }
+
+  if (mergedType !== undefined) merged['type'] = mergedType;
+  if (Object.keys(mergedProperties).length > 0) merged['properties'] = mergedProperties;
+  if (mergedRequired.length > 0) merged['required'] = mergedRequired;
+
+  return merged as Schema;
+}
+
+/**
  * Generate a value for an OpenAPI schema, applying the full resolution priority chain:
  *
  * 1. Override (if provided for the current path)
@@ -187,6 +244,13 @@ export function generateValueForSchema(schema: Schema, options: GenerateValueOpt
         // Fall through to type-based generation
       }
     }
+  }
+
+  // --- allOf composition: deep-merge and generate ---
+  const allOf = (schema as Record<string, unknown>)['allOf'] as Schema[] | undefined;
+  if (allOf && allOf.length > 0) {
+    const merged = mergeAllOf(allOf);
+    return generateValueForSchema(merged, { ...baseOptions, propertyName, _overridePath });
   }
 
   // --- Priority 5: Type-based generation ---
