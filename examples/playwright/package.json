@@ -1,0 +1,20 @@
+{
+  "name": "openapi-mocks-playwright-example",
+  "version": "1.0.0",
+  "description": "Example: Playwright E2E testing with openapi-mocks",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "install-browsers": "playwright install --with-deps chromium",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "openapi-mocks": "file:../../packages/openapi-mocks"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.1",
+    "typescript": "^5.9.3"
+  }
+}
