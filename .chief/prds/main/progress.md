@@ -9,7 +9,20 @@
 - Schema walker (`schema-walker.ts`) uses `_overridePath` internal option for dot-path override matching; pass it when recursing to track current path
 - Optional fields use `faker.datatype.boolean()` for ~50/50 omission; overrides force inclusion by checking if any override key starts with `${propPath}`
 - Circular ref detection uses `_visitedSchemas: Set<object>` (by identity) combined with `_depth` vs `maxDepth`
+- `arrayLengths` wildcard `[*]` notation: in `generateArray`, scan all arrayLengths keys for `{currentPath}[*].{childKey}` pattern, de-scope to `{childKey}` for item generation; consumed wildcard keys are removed from itemArrayLengths to avoid re-matching
 
+---
+
+## 2026-02-18 - US-017
+- Enhanced `generateArray` in `src/generators/schema-walker.ts` with wildcard `[*]` notation support
+- Added 7 comprehensive tests in `src/__tests__/schema-walker.test.ts` covering: exact length, range, schema constraint intersection, exact override with schema constraints, default 0-5, nested wildcard path (`users[*].addresses`), seeded determinism
+- The existing intersection logic was slightly corrected: schema constraints (`minItems`/`maxItems`) are now the baseline (not capped at 5), then `arrayLengths` intersects with them; the 0-5 default is only applied when NEITHER schema constraints NOR arrayLengths are specified
+- Wildcard de-scoping: `users[*].addresses: [1,1]` → when generating `users` items, passes `{ addresses: [1,1] }` to each item's generation; non-wildcard arrayLengths keys are also preserved for descendants
+- Files changed: `packages/openapi-mocks/src/generators/schema-walker.ts`, `packages/openapi-mocks/src/__tests__/schema-walker.test.ts`, `.chief/prds/main/prd.json`
+- **Learnings for future iterations:**
+  - `arrayLengths` keys can be either simple property names (`"users"`) OR wildcard paths (`"users[*].addresses"`) — match by overridePath or propertyName for simple keys, scan for wildcardPrefix for nested
+  - When intersecting `arrayLengths` with schema constraints: `min = max(minItems, overrideMin)`, `max = min(maxItems, overrideMax)`; for equal tuples `[N,N]` the exact count wins regardless of intersection
+  - Consumed wildcard keys should be stripped from child `arrayLengths` to avoid them applying at deeper levels; remaining non-wildcard keys pass through so they can match at descendant levels
 ---
 
 ## 2026-02-18 - US-015
