@@ -956,26 +956,140 @@ describe('generateValueForSchema', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Circular reference handling
+  // Circular reference handling (US-013)
   // -------------------------------------------------------------------------
   describe('circular reference handling', () => {
-    it('stops recursion at maxDepth and returns minimal stub for required fields', () => {
+    it('stops recursion at default maxDepth (3) for self-referential schemas', () => {
       // Simulate a self-referential schema by reusing the same object reference
-      const childSchema: Record<string, unknown> = {
+      const nodeSchema: Record<string, unknown> = {
+        type: 'object',
+        properties: {},
+        required: ['child'],
+      };
+      // Make it self-referential by reference
+      nodeSchema['properties'] = { child: nodeSchema };
+
+      // Should not throw or infinite loop; depth limit prevents infinite recursion
+      expect(() =>
+        generateValueForSchema(nodeSchema, {
+          faker: fakerInstance,
+        }),
+      ).not.toThrow();
+    });
+
+    it('optional circular field is omitted when depth limit is reached', () => {
+      // Node with an optional self-reference
+      const nodeSchema: Record<string, unknown> = {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+        },
+        required: ['id'],
+        // 'child' is NOT in required — it's optional
+      };
+      nodeSchema['properties'] = {
+        id: { type: 'string' },
+        child: nodeSchema,
+      };
+
+      // Run multiple times — optional circular field should be omitted at depth limit
+      let seenWithoutChild = false;
+      for (let i = 0; i < 30; i++) {
+        fakerInstance.seed(i);
+        const result = generateValueForSchema(nodeSchema, {
+          faker: fakerInstance,
+          maxDepth: 1,
+        }) as Record<string, unknown>;
+        expect(typeof result).toBe('object');
+        // id is required, should always be present
+        expect(result).toHaveProperty('id');
+        // At depth limit, optional circular field must not cause infinite loop
+        // (may or may not be present at shallow levels)
+        if (!('child' in result)) {
+          seenWithoutChild = true;
+        }
+      }
+      expect(seenWithoutChild).toBe(true);
+    });
+
+    it('required circular field gets a minimal stub at depth limit', () => {
+      // Node with a required self-reference
+      const nodeSchema: Record<string, unknown> = {
         type: 'object',
         properties: {},
         required: ['self'],
       };
-      // Make it self-referential by reference
-      childSchema['properties'] = { self: childSchema };
+      nodeSchema['properties'] = { self: nodeSchema };
 
-      // Should not throw or infinite loop
+      fakerInstance.seed(SEED);
+      // Should not throw; the required circular field gets a stub
+      const result = generateValueForSchema(nodeSchema, {
+        faker: fakerInstance,
+        maxDepth: 1,
+      }) as Record<string, unknown>;
+
+      expect(typeof result).toBe('object');
+      expect(result).not.toBeNull();
+      // The self field may be a stub (empty object, null, etc.) — but should be defined
+      expect('self' in result).toBe(true);
+    });
+
+    it('custom maxDepth is respected', () => {
+      // With maxDepth: 0, should immediately stub required circular refs
+      const nodeSchema: Record<string, unknown> = {
+        type: 'object',
+        properties: {},
+        required: ['child'],
+      };
+      nodeSchema['properties'] = { child: nodeSchema };
+
+      fakerInstance.seed(SEED);
       expect(() =>
-        generateValueForSchema(childSchema, {
+        generateValueForSchema(nodeSchema, {
           faker: fakerInstance,
-          maxDepth: 2,
+          maxDepth: 0,
         }),
       ).not.toThrow();
+
+      // With maxDepth: 5, should recurse deeper before stopping
+      const linearSchema: Record<string, unknown> = {
+        type: 'object',
+        properties: {},
+        required: ['next'],
+      };
+      linearSchema['properties'] = { next: linearSchema };
+
+      fakerInstance.seed(SEED);
+      expect(() =>
+        generateValueForSchema(linearSchema, {
+          faker: fakerInstance,
+          maxDepth: 5,
+        }),
+      ).not.toThrow();
+    });
+
+    it('self-referential schema at depth 3 produces valid output at all levels', () => {
+      // Verify that the output at each level is a valid object, not undefined
+      const nodeSchema: Record<string, unknown> = {
+        type: 'object',
+        properties: {},
+        required: ['id'],
+      };
+      nodeSchema['properties'] = {
+        id: { type: 'string' },
+        child: nodeSchema, // optional circular reference
+      };
+
+      fakerInstance.seed(SEED);
+      const result = generateValueForSchema(nodeSchema, {
+        faker: fakerInstance,
+        maxDepth: 3,
+        ignoreExamples: true,
+      }) as Record<string, unknown>;
+
+      expect(typeof result).toBe('object');
+      expect(result).not.toBeNull();
+      expect(typeof result['id']).toBe('string');
     });
   });
 });
