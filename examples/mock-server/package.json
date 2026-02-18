@@ -1,0 +1,21 @@
+{
+  "name": "openapi-mocks-mock-server-example",
+  "version": "1.0.0",
+  "description": "Example: standalone HTTP mock server using openapi-mocks",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "hono": "^4.6.17",
+    "openapi-mocks": "file:../../packages/openapi-mocks"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3",
+    "@types/node": "^22.10.1"
+  }
+}
