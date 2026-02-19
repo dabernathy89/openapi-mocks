@@ -8,6 +8,20 @@
 
 ---
 
+## 2026-02-18 - US-003
+- What was implemented: Added Vue 3 + @astrojs/vue integration to the Astro docs site. Installed all required packages and added `vue()` to the integrations array in astro.config.mjs. Created a minimal VueSmokeTest.vue component. Installed CodeMirror dependencies (vue-codemirror, @codemirror/lang-yaml, @codemirror/lang-javascript, @codemirror/theme-one-dark, js-yaml).
+- Files changed:
+  - `docs/package.json` — added `@astrojs/vue` (devDep), `vue`, `vue-codemirror`, `@codemirror/lang-yaml`, `@codemirror/lang-javascript`, `@codemirror/theme-one-dark`, `js-yaml`
+  - `docs/astro.config.mjs` — imported `vue` from `@astrojs/vue`, added `vue()` to integrations array (before starlight)
+  - `docs/src/components/VueSmokeTest.vue` (new) — minimal smoke-test Vue SFC
+  - `pnpm-lock.yaml` — updated lockfile
+  - `.chief/prds/docs-playground/prd.json` — marked US-003 passes: true
+- **Learnings for future iterations:**
+  - `vue()` integration must be placed BEFORE `starlight()` in the integrations array
+  - `pnpm typecheck` (which runs `astro check`) is the quality check for the docs package — runs in ~2s
+  - The `public/mockServiceWorker.js` triggers a ts(2570) hint about `Client` type but it's not an error and is pre-existing
+---
+
 ## 2026-02-18 - US-002
 - What was implemented: Added `msw` as a direct dependency in `docs/package.json` (v2.x) and ran `npx msw init docs/public/` to copy `mockServiceWorker.js` into the docs public directory. Created the `docs/public/` directory.
 - Files changed:
