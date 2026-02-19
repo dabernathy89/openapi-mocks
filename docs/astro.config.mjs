@@ -1,9 +1,11 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
+import vue from '@astrojs/vue';
 
 export default defineConfig({
   integrations: [
+    vue(),
     starlight({
       title: 'openapi-mocks',
       defaultLocale: 'root',

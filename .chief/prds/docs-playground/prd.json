@@ -44,7 +44,7 @@
         "`vue-codemirror`, `@codemirror/lang-yaml`, `@codemirror/lang-javascript`, `@codemirror/theme-one-dark`, and `js-yaml` are added to `docs/package.json` (see dependency versions in plan)"
       ],
       "priority": 3,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-004",
