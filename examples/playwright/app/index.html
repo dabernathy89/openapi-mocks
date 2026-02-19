@@ -6,7 +6,7 @@
   <title>Acme App – Users</title>
   <style>
     body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
-    .user-card { border: 1px solid #ddd; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; }
+    .user-card, .order-card { border: 1px solid #ddd; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; }
     .address { background: #f5f5f5; padding: 0.5rem; margin-top: 0.5rem; border-radius: 4px; }
     .error { color: red; }
     nav a { margin-right: 1rem; }
@@ -18,6 +18,7 @@
   <nav>
     <a href="/users">Users</a>
     <a href="/users/new">New User</a>
+    <a href="/orders">Orders</a>
     <a href="/dashboard">Dashboard</a>
   </nav>
 
@@ -55,6 +56,22 @@
         </div>
         <button type="submit">Create</button>
       </form>
+    </div>
+
+    <div id="order-list" style="display:none">
+      <h1>Orders</h1>
+      <div id="orders-container"></div>
+    </div>
+
+    <div id="order-detail" style="display:none">
+      <h1>Order Detail</h1>
+      <p><strong>ID:</strong> <span data-testid="order-id"></span></p>
+      <p><strong>Status:</strong> <span data-testid="order-status"></span></p>
+      <p><strong>Total:</strong> <span data-testid="order-total"></span></p>
+      <h2>Items</h2>
+      <div id="order-items-container"></div>
+      <h2>Payment Method</h2>
+      <div data-testid="payment-method"></div>
     </div>
 
     <div id="dashboard" style="display:none">

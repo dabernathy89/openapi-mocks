@@ -33,7 +33,8 @@
         "Nav in `app/index.html` includes an \"Orders\" link"
       ],
       "priority": 2,
-      "passes": false
+      "passes": false,
+      "inProgress": true
     },
     {
       "id": "US-003",

@@ -110,6 +110,65 @@ async function renderCreateUserForm() {
   };
 }
 
+async function renderOrders() {
+  const res = await fetch(`${API_BASE}/orders`);
+  const data = await res.json();
+
+  show("order-list");
+
+  const container = document.getElementById("orders-container");
+  container.innerHTML = "";
+
+  for (const order of data.orders ?? []) {
+    const card = document.createElement("div");
+    card.className = "order-card";
+    card.dataset.testid = "order-card";
+    card.innerHTML = `
+      <strong>Order ${order.id}</strong>
+      <p>Status: ${order.status ?? ""}</p>
+      <p>Total: ${order.total ?? ""} ${order.currency ?? ""}</p>
+    `;
+    container.appendChild(card);
+  }
+}
+
+async function renderOrderDetail(orderId) {
+  const res = await fetch(`${API_BASE}/orders/${orderId}`);
+  const data = await res.json();
+
+  show("order-detail");
+
+  document.querySelector("[data-testid='order-id']").textContent = data.id ?? orderId;
+  document.querySelector("[data-testid='order-status']").textContent = data.status ?? "";
+  document.querySelector("[data-testid='order-total']").textContent = data.total ?? "";
+
+  // Render order items
+  const itemsContainer = document.getElementById("order-items-container");
+  itemsContainer.innerHTML = "";
+  for (const item of data.items ?? []) {
+    const el = document.createElement("div");
+    el.dataset.testid = "order-item";
+    el.dataset.itemType = item.type ?? "";
+    el.innerHTML = `
+      <strong>${item.type === "digital" ? "Digital" : "Physical"} Product</strong>
+      ${item.weight != null ? `<p>Weight: ${item.weight}</p>` : ""}
+      ${item.downloadUrl != null ? `<p>Download: ${item.downloadUrl}</p>` : ""}
+    `;
+    itemsContainer.appendChild(el);
+  }
+
+  // Render payment method
+  const paymentEl = document.querySelector("[data-testid='payment-method']");
+  if (paymentEl && data.paymentMethod) {
+    const pm = data.paymentMethod;
+    const paymentType = pm.last4 != null ? "credit-card" : "bank-transfer";
+    paymentEl.dataset.paymentType = paymentType;
+    paymentEl.innerHTML = paymentType === "credit-card"
+      ? `<p>Card ending in ${pm.last4} (${pm.brand ?? ""})</p>`
+      : `<p>Bank account ending in ${pm.accountLast4}</p>`;
+  }
+}
+
 async function renderDashboard() {
   show("dashboard");
 
@@ -145,6 +204,11 @@ function route() {
     renderUsers();
   } else if (path === "/dashboard") {
     renderDashboard();
+  } else if (path.startsWith("/orders/")) {
+    const orderId = path.replace("/orders/", "");
+    renderOrderDetail(orderId);
+  } else if (path === "/orders") {
+    renderOrders();
   }
 }
 
