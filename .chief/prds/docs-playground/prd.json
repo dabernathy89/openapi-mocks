@@ -78,7 +78,8 @@
         "`js-yaml.load(SAMPLE_SPEC)` parses without errors"
       ],
       "priority": 5,
-      "passes": false
+      "passes": false,
+      "inProgress": true
     },
     {
       "id": "US-006",
