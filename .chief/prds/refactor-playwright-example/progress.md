@@ -5,7 +5,25 @@
 - The existing test pattern uses `mocks.data()` + Playwright's `page.route()` for interception (no MSW yet)
 - Tests use `data-testid` attributes for element selection
 - The app is a vanilla JS SPA served by `server.js` on port 4200
+- To install deps in `examples/playwright/` (NOT a workspace member), use `pnpm install --ignore-workspace` from that directory
+- MSW-based tests import `{ test, expect }` from `./fixtures` — the `network` fixture runs automatically (`auto: true`) for every test; call `network.use()` for per-test handler overrides
+- `@msw/playwright` uses `page.route()` internally — no service worker initialization needed; no `mockServiceWorker.js` generation required
 
+---
+
+## 2026-02-18 - US-003
+- What was implemented: Set up @msw/playwright fixture for MSW-based Playwright tests
+  - Added `msw` (^2.12.10) and `@msw/playwright` (^0.6.4) to `devDependencies` in `examples/playwright/package.json`
+  - Installed packages with `pnpm install --ignore-workspace` (required because the example is NOT a workspace member)
+  - Created `e2e/fixtures.ts` exporting an extended `test` and `expect` using `@msw/playwright`'s `defineNetworkFixture`
+  - The `network` fixture runs automatically (`auto: true`) for every test without being listed explicitly
+  - The `handlers` fixture defaults to `[]` and is marked as `{ option: true }` so individual tests can override
+  - All 8 existing tests still pass after the changes
+- Files changed: `examples/playwright/package.json`, `examples/playwright/pnpm-lock.yaml`, `examples/playwright/e2e/fixtures.ts`, `.chief/prds/refactor-playwright-example/prd.json`
+- **Learnings for future iterations:**
+  - `@msw/playwright` uses `page.route()` internally — no `mockServiceWorker.js` needed; the PRD's mention of `npx msw init` is not necessary for this integration
+  - The `handlers` fixture option value is an empty array `[]`, not a pre-built handler set — MSW-based specs that need handlers call `network.use(http.get(...))` inline
+  - New MSW-based spec files should import from `./fixtures` (not `@playwright/test`) to get the pre-wired `network` fixture
 ---
 
 ## 2026-02-18 - US-002

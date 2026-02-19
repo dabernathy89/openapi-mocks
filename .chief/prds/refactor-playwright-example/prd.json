@@ -48,8 +48,8 @@
         "All new MSW-based spec files import `{ test, expect }` from `./fixtures` instead of `@playwright/test`"
       ],
       "priority": 3,
-      "passes": false,
-      "inProgress": true
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-004",
