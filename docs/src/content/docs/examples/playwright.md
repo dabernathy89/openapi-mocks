@@ -192,32 +192,35 @@ await page.route("**/api/v1/users", (route) => {
 });
 ```
 
-### Pagination with request-aware route handlers
+### Pagination with request-aware transforms
 
-`page.route()` gives you access to the intercepted request URL so you can implement cursor-based pagination:
+The `transform` option on `.handlers()` receives both the generated base data and the live MSW `Request` object, so you can read query parameters and patch the response before it's returned:
 
 ```ts
-const baseData = (await mocks.data({
-  operations: { listUsers: { arrayLengths: { users: [5, 5] } } },
-})).get("listUsers")?.get(200);
+const handlers = await mocks.handlers({
+  operations: {
+    listUsers: {
+      arrayLengths: { users: [10, 10] },
+      transform: (data, request) => {
+        const url = new URL(request.url);
+        const cursor = url.searchParams.get("cursor");
+        const page = cursor ? parseInt(cursor, 10) : 1;
 
-await page.route("**/api/v1/users**", (route, request) => {
-  const url = new URL(request.url());
-  const cursor = url.searchParams.get("cursor");
-  const pageNum = cursor ? parseInt(cursor, 10) : 1;
-
-  route.fulfill({
-    status: 200,
-    contentType: "application/json",
-    body: JSON.stringify({
-      ...baseData,
-      page: pageNum,
-      nextPage: pageNum < 3 ? pageNum + 1 : null,
-      totalPages: 3,
-    }),
-  });
+        return {
+          ...data,
+          page,
+          nextPage: page < 3 ? page + 1 : null,
+          totalPages: 3,
+        };
+      },
+    },
+  },
 });
+
+await startMockServiceWorker(page, handlers);
 ```
+
+The transform runs inside the MSW handler at intercept time. The library generates the base payload once, then your transform tweaks it per-request. No manual `page.route()` wiring needed.
 
 ### Seeding for snapshot tests
 
