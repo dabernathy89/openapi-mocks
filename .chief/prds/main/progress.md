@@ -1,3 +1,15 @@
+## 2026-02-18 - US-037
+- What was implemented: Composition guide page explaining allOf, oneOf, anyOf handling, discriminator support, and nullable schema differences between OpenAPI versions
+- Files changed:
+  - `docs/src/content/docs/guides/composition.md` — new guide covering: `allOf` deep-merge with table of merged fields, conflicting types error, `oneOf` random + discriminator selection (with/without mapping), `anyOf` multi-schema selection, nullable (3.0.x `nullable: true` vs 3.1.x `type: ["string", "null"]`), interaction with priority chain and overrides
+  - `docs/astro.config.mjs` — added Schema Composition page to the Guides sidebar group
+  - `.chief/prds/main/prd.json` — marked US-037 as passes: true
+- **Learnings for future iterations:**
+  - Sidebar entry format confirmed: `{ label: 'Name', slug: 'guides/page' }` — consistent across all guide pages
+  - Duplicate ID warnings from starlight-typedoc remain non-fatal on every `astro check` run
+  - The `astro check` command re-runs TypeDoc and regenerates reference pages; expect ~1s for type generation
+---
+
 ## 2026-02-18 - US-036
 - What was implemented: Configuration guide page documenting all global and per-operation options
 - Files changed:
