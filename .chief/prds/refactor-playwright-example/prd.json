@@ -84,8 +84,8 @@
         "Tests can run headlessly in CI"
       ],
       "priority": 5,
-      "passes": false,
-      "inProgress": true
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-006",

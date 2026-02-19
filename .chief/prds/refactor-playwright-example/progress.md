@@ -14,6 +14,22 @@
 
 ---
 
+## 2026-02-18 - US-005
+- What was implemented: Added E2E tests for composite schema keywords
+  - Created `e2e/composite-schemas.spec.ts` with three test.describe blocks:
+    - `allOf — Order extends BaseEntity`: Generates order via `getOrder`, asserts both BaseEntity fields (`id`, `createdAt`, `updatedAt`) and Order-specific fields (`status`, `total`) are present; also validates via UI
+    - `oneOf — OrderItem discriminator`: Uses `arrayLengths: { items: [3, 3] }` + transform fallback to guarantee items; asserts `type` discriminator is always present; asserts PhysicalProduct items have `weight`/`dimensions` and NOT `downloadUrl`/`licenseKey`, and vice versa; also validates `data-item-type` attributes in UI
+    - `anyOf — PaymentMethod`: Uses transform to guarantee `paymentMethod` is present; asserts at least one variant's fields are present (CreditCard or BankTransfer); validates `data-payment-type` in UI
+  - All 3 tests use `mocks.data()` + `page.route()` (no MSW fixture)
+  - All 14 Playwright tests pass
+- Files changed: `examples/playwright/e2e/composite-schemas.spec.ts`, `.chief/prds/refactor-playwright-example/prd.json`
+- **Learnings for future iterations:**
+  - `x-faker-method: date.past` returns a Date object (not a string) — test with `toBeTruthy()` or `toBeInstanceOf(Date)` rather than `typeof x === "string"` when asserting date fields
+  - `arrayLengths` for nested arrays uses dot-path or glob syntax (e.g. `items: [3, 3]`) — but optional fields may not be generated even with `arrayLengths`; use a transform fallback to guarantee presence
+  - anyOf tests should check `isCreditCard || isBankTransfer` (not exclusive) because anyOf allows conforming to multiple variants simultaneously
+
+---
+
 ## 2026-02-18 - US-004
 - What was implemented: Added MSW handler tests for request-aware features
   - Created `e2e/msw-handlers.spec.ts` with three test.describe blocks:
