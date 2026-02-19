@@ -29,6 +29,7 @@ export default defineConfig({
           label: 'Guides',
           items: [
             { label: 'Configuration', slug: 'guides/configuration' },
+            { label: 'Schema Composition', slug: 'guides/composition' },
           ],
         },
         {
