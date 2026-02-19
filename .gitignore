@@ -33,6 +33,10 @@ vitest.coverage/
 .astro/
 docs/.astro/
 docs/dist/
+docs/src/content/docs/reference/
+
+# Playwright
+test-results/
 
 # Turbo
 .turbo/
