@@ -1,0 +1,8 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import PlaygroundApp from '../components/playground/Playground.vue';
+---
+
+<StarlightPage frontmatter={{ title: 'Playground' }}>
+  <PlaygroundApp client:only="vue" />
+</StarlightPage>
