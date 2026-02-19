@@ -33,6 +33,7 @@ export default defineConfig({
           label: 'Examples',
           items: [
             { label: 'Playwright E2E', slug: 'examples/playwright' },
+            { label: 'Mock Server', slug: 'examples/mock-server' },
           ],
         },
         typeDocSidebarGroup,
