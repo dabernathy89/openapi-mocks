@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 
 export default defineConfig({
   integrations: [
@@ -12,6 +13,17 @@ export default defineConfig({
           lang: 'en',
         },
       },
+      plugins: [
+        starlightTypeDoc({
+          entryPoints: ['../packages/openapi-mocks/src/index.ts'],
+          tsconfig: '../packages/openapi-mocks/tsconfig.json',
+          output: 'reference',
+          typeDoc: {
+            excludePrivate: true,
+            excludeInternal: true,
+          },
+        }),
+      ],
       sidebar: [
         {
           label: 'Guides',
@@ -21,10 +33,7 @@ export default defineConfig({
           label: 'Examples',
           items: [],
         },
-        {
-          label: 'API Reference',
-          items: [],
-        },
+        typeDocSidebarGroup,
       ],
     }),
   ],
