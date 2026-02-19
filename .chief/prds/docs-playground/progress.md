@@ -1,3 +1,23 @@
+## 2026-02-18 - US-008
+- What was implemented: Full `usePlayground` composable with MSW service worker setup, debounced spec/code watchers, dynamic browser bundle import, AsyncFunction eval, and `worker.resetHandlers()` integration. Updated `Playground.vue` to use the composable. Updated `HandlerAccordion.vue` to accept `evalStatus` and `evalError` props for loading/error display. Added `docs/scripts/copy-browser-bundle.js` script and wired it into the docs build step.
+- Files changed:
+  - `docs/src/components/playground/usePlayground.ts` — full implementation
+  - `docs/src/components/playground/Playground.vue` — wired to `usePlayground` composable
+  - `docs/src/components/playground/HandlerAccordion.vue` — accepts `evalStatus` + `evalError` props
+  - `docs/scripts/copy-browser-bundle.js` — copies browser bundle to `docs/public/playground/`
+  - `docs/package.json` — updated `build` script to copy bundle; added `@types/js-yaml` devDep
+  - `pnpm-lock.yaml` — updated lockfile
+  - `.chief/prds/docs-playground/prd.json` — marked US-008 passes: true
+- **Learnings for future iterations:**
+  - `js-yaml` lacks its own types — must install `@types/js-yaml` as devDependency; use static `import * as jsYaml from 'js-yaml'` (not dynamic) for typecheck compatibility
+  - Dynamic import of `/playground/openapi-mocks.browser.js` uses a string cast (`as string`) to satisfy TS — this is safe since Vite serves it as a static asset at runtime
+  - `AsyncFunction` pattern: `Object.getPrototypeOf(async function(){}).constructor` — cast as `new(...args: string[]) => (...args: unknown[]) => Promise<unknown>` for TS
+  - MSW `setupWorker()` must be called with no handlers initially; use `worker.resetHandlers(...handlers)` after eval
+  - Pass `{ onUnhandledRequest: 'bypass' }` to `worker.start()` to prevent MSW from printing warnings for unrelated fetches
+  - The `public/playground/` directory is created by the copy script at build time; in dev, manually run the copy script or build the browser bundle first
+
+---
+
 ## 2026-02-18 - US-007
 - What was implemented: Replaced the stub `CodeEditor.vue` with a full CodeMirror 6 editor using `vue-codemirror`, `@codemirror/lang-javascript`, `@codemirror/theme-one-dark`, and `EditorView.lineWrapping`. Panel header shows label "Client Code" and a note "// createMockClient and spec are pre-injected". Component is a pure controlled input with no eval logic.
 - Files changed:
