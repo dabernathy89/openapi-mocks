@@ -30,8 +30,7 @@
         "In a running docs dev server, DevTools \u003e Application \u003e Service Workers shows `mockServiceWorker.js` active at scope `/`"
       ],
       "priority": 2,
-      "passes": false,
-      "inProgress": true
+      "passes": true
     },
     {
       "id": "US-003",
