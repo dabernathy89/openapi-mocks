@@ -1,3 +1,16 @@
+## 2026-02-18 - US-009
+- What was implemented: Full `HandlerAccordion.vue` with single-expand accordion behavior tracking `expandedKey` ref. `HandlerRow.vue` upgraded from stub to full component with colored HTTP method badges, chevron indicator, and expand/toggle event delegation.
+- Files changed:
+  - `docs/src/components/playground/HandlerAccordion.vue` — accordion behavior with `expandedKey` ref, loading spinner, error display, empty-state message; passes `expanded` + `@toggle` to each `HandlerRow`
+  - `docs/src/components/playground/HandlerRow.vue` — method badge with per-method colors (GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS), path display, chevron, `expanded` prop, `toggle` emit
+  - `.chief/prds/docs-playground/prd.json` — marked US-009 passes: true
+- **Learnings for future iterations:**
+  - Accordion "only one open" pattern: parent tracks `expandedKey = ref<string | null>(null)` using `method:path` as key; child receives `:expanded="expandedKey === key"` and emits `@toggle`; parent toggles by comparing current value
+  - `HandlerRow` is a pure presentational component at this stage — fetch logic (US-010) will be added to it in the next story
+  - Method badge colors work well with CSS classes like `.method-GET`, `.method-POST` etc. keyed by `method.toUpperCase()`
+  - The `toggle` emit defined as `defineEmits<{ toggle: [] }>()` (no payload) requires calling as `emit('toggle')` without arguments
+---
+
 ## 2026-02-18 - US-008
 - What was implemented: Full `usePlayground` composable with MSW service worker setup, debounced spec/code watchers, dynamic browser bundle import, AsyncFunction eval, and `worker.resetHandlers()` integration. Updated `Playground.vue` to use the composable. Updated `HandlerAccordion.vue` to accept `evalStatus` and `evalError` props for loading/error display. Added `docs/scripts/copy-browser-bundle.js` script and wired it into the docs build step.
 - Files changed:
