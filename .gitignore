@@ -30,8 +30,16 @@ coverage/
 vitest.coverage/
 
 # Astro
+.astro/
 docs/.astro/
 docs/dist/
+docs/src/content/docs/reference/
+
+# Playwright
+test-results/
+
+# Turbo
+.turbo/
 
 # Environment
 .env
@@ -48,3 +56,5 @@ CHANGELOG.md
 
 # Tool internals
 .chief/prds/*/claude.log
+docs/.wrangler/tmp
+.claude/settings.local.json

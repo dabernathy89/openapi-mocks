@@ -1,0 +1,179 @@
+---
+title: openapi-mocks
+description: Generate realistic mock data and MSW v2 handlers from your OpenAPI 3.x spec — with one function call.
+template: splash
+hero:
+  title: openapi-mocks
+  tagline: Spec-compliant mock data and MSW v2 handlers from your OpenAPI document. One source of truth, zero maintenance.
+  actions:
+    - text: Get Started
+      link: /guides/configuration/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/your-org/openapi-mocks
+      icon: external
+---
+
+import { Tabs, TabItem, Card, CardGrid } from '@astrojs/starlight/components';
+
+## What is openapi-mocks?
+
+`openapi-mocks` is a TypeScript library that parses **OpenAPI 3.0.x / 3.1.x** documents and generates
+realistic mock data and pre-built [MSW](https://mswjs.io/) v2 request handlers.
+
+Get spec-compliant fake data for tests, stories, and local dev — all from a single OpenAPI source of truth.
+
+<CardGrid>
+  <Card title="Tests" icon="approve-check-circle">
+    Seed-stable, reproducible data for unit and integration tests. Pin arrays to exact lengths,
+    force specific status codes, and snapshot deterministic output.
+  </Card>
+  <Card title="Storybook" icon="open-book">
+    Realistic Faker-generated values for every field — not placeholder `"string"` junk.
+    Transform data per-story without touching your OpenAPI spec.
+  </Card>
+  <Card title="Local dev" icon="laptop">
+    Drop-in MSW handlers that mirror your real API. Route tables stay in sync with your spec
+    automatically — no manual handler maintenance.
+  </Card>
+</CardGrid>
+
+## Installation
+
+<Tabs>
+  <TabItem label="npm">
+    ```bash
+    npm install openapi-mocks
+    ```
+  </TabItem>
+  <TabItem label="pnpm">
+    ```bash
+    pnpm add openapi-mocks
+    ```
+  </TabItem>
+  <TabItem label="yarn">
+    ```bash
+    yarn add openapi-mocks
+    ```
+  </TabItem>
+  <TabItem label="bun">
+    ```bash
+    bun add openapi-mocks
+    ```
+  </TabItem>
+</Tabs>
+
+MSW is a **peer dependency** — install it only if you need `.handlers()`:
+
+<Tabs>
+  <TabItem label="npm">
+    ```bash
+    npm install msw --save-dev
+    ```
+  </TabItem>
+  <TabItem label="pnpm">
+    ```bash
+    pnpm add -D msw
+    ```
+  </TabItem>
+  <TabItem label="yarn">
+    ```bash
+    yarn add -D msw
+    ```
+  </TabItem>
+  <TabItem label="bun">
+    ```bash
+    bun add -d msw
+    ```
+  </TabItem>
+</Tabs>
+
+## Quick Start
+
+### Generate mock data (no MSW required)
+
+```ts
+import { createMockClient } from 'openapi-mocks';
+
+const mocks = createMockClient('./specs/acme-api.yaml', {
+  seed: 42, // reproducible output
+});
+
+// Returns Map<operationId, Map<statusCode, generatedData>>
+const data = await mocks.data();
+
+const users = data.get('listUsers')?.get(200);
+// → { users: [{ id: "...", name: "Alice Hart", email: "alice@example.com" }, ...] }
+
+// Scope to specific operations and control array lengths
+const scoped = await mocks.data({
+  operations: {
+    listUsers: { arrayLengths: { users: [5, 5] } },
+    getUser: {},
+  },
+});
+
+// Generate error responses alongside success responses
+const withErrors = await mocks.data({
+  statusCodes: [200, 422],
+  operations: { createUser: {} },
+});
+```
+
+### Generate MSW v2 handlers
+
+```ts
+import { createMockClient } from 'openapi-mocks';
+
+const mocks = createMockClient('./specs/acme-api.yaml', {
+  seed: 42,
+  baseUrl: 'https://api.acme.dev/v1',
+});
+
+// Lazily imports MSW at call time — consumers of .data() never touch MSW
+const handlers = await mocks.handlers({
+  operations: {
+    listUsers: {
+      arrayLengths: { users: [3, 3] },
+    },
+    getUser: {
+      // Echo the :userId path param into the response body
+      // (set echoPathParams: true globally or per-call)
+    },
+    createUser: {
+      statusCode: 422, // force an error response
+      transform: (data, request) => ({
+        ...data,
+        fieldErrors: [{ field: 'email', message: 'Email is already taken.' }],
+      }),
+    },
+  },
+  echoPathParams: true,
+});
+
+// Wire into your MSW setup (browser or Node)
+// setupWorker(...handlers).start();   // browser
+// setupServer(...handlers).listen();  // Node
+```
+
+## Next Steps
+
+<CardGrid>
+  <Card title="Configuration Guide" icon="setting">
+    Every global and per-operation option documented with types, defaults, and examples.
+    [Read the guide →](/guides/configuration/)
+  </Card>
+  <Card title="Playwright E2E Example" icon="puzzle">
+    End-to-end example project wiring `openapi-mocks` into Playwright tests with MSW.
+    [See the example →](/examples/playwright/)
+  </Card>
+  <Card title="Mock Server Example" icon="rocket">
+    Standalone HTTP mock server built with Hono and `createMockClient.data()` — no MSW needed.
+    [See the example →](/examples/mock-server/)
+  </Card>
+  <Card title="API Reference" icon="information">
+    Auto-generated TypeDoc reference for all exported functions and types.
+    [Browse the reference →](/reference/)
+  </Card>
+</CardGrid>

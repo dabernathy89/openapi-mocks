@@ -1,0 +1,48 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GitHub subset spec integration > .data() > snapshot: stable non-date fields for getRepo with seed 42 1`] = `
+{
+  "full_name": "Krista Greenfelder",
+  "id": -538846087,
+  "name": "Dr. Melissa Wisozk",
+  "open_issues_count": 200619122,
+  "private": true,
+  "watchers_count": -1036032091,
+}
+`;
+
+exports[`GitHub subset spec integration > .data() > snapshot: stable non-date fields for getUser with seed 42 1`] = `
+{
+  "followers": -1548362079,
+  "following": -892731937,
+  "id": -538846087,
+  "login": "octocat",
+  "public_repos": 480404524,
+  "type": "Organization",
+}
+`;
+
+exports[`Petstore spec integration > .data() > snapshot: listPets with 2 items is stable with seed 42 1`] = `
+{
+  "data": [
+    {
+      "id": -2260084296035859,
+      "name": "Lavinia Crist",
+      "tag": "suggero accusator volubilis tristis",
+    },
+    {
+      "id": -5182037895833523,
+      "name": "Evelyn Kemmer",
+      "tag": "claro",
+    },
+  ],
+}
+`;
+
+exports[`Petstore spec integration > .data() > snapshot: showPetById output is stable with seed 42 1`] = `
+{
+  "id": -2260084296035859,
+  "name": "Lavinia Crist",
+  "tag": "suggero accusator volubilis tristis",
+}
+`;

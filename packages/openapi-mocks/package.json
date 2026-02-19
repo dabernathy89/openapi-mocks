@@ -1,0 +1,49 @@
+{
+  "name": "openapi-mocks",
+  "version": "0.0.0",
+  "type": "module",
+  "private": false,
+  "description": "Generate realistic mock data and MSW v2 request handlers from OpenAPI 3.x documents",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "msw": "^2.12.10",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^3.2.4"
+  },
+  "peerDependencies": {
+    "msw": ">=2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "msw": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@apidevtools/swagger-parser": "^12.1.0",
+    "@faker-js/faker": "^10.3.0",
+    "openapi-types": "^12.1.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

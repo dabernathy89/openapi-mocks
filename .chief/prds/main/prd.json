@@ -17,7 +17,8 @@
         "Typecheck passes at root level"
       ],
       "priority": 1,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-002",
@@ -32,7 +33,8 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-003",
@@ -46,7 +48,8 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-004",
@@ -54,8 +57,8 @@
       "description": "As a developer, I need a module that accepts any of the four supported spec input forms (URL, file path, JSON string, plain object), parses and resolves all `$ref` pointers, and returns a fully dereferenced OpenAPI document.",
       "acceptanceCriteria": [
         "`@apidevtools/swagger-parser` and `openapi-types` installed as direct dependencies",
-        "Internal module (e.g. `src/parser.ts`) exports an async function like `resolveSpec(input: SpecInput): Promise\u003cOpenAPIV3.Document | OpenAPIV3_1.Document\u003e`",
-        "`SpecInput` type is defined as `string | OpenAPIV3.Document | OpenAPIV3_1.Document | Record\u003cstring, unknown\u003e`",
+        "Internal module (e.g. `src/parser.ts`) exports an async function like `resolveSpec(input: SpecInput): Promise<OpenAPIV3.Document | OpenAPIV3_1.Document>`",
+        "`SpecInput` type is defined as `string | OpenAPIV3.Document | OpenAPIV3_1.Document | Record<string, unknown>`",
         "String inputs starting with `http://` or `https://` are treated as URLs",
         "String inputs that look like JSON (start with `{`) are parsed with `JSON.parse` before passing to Swagger Parser",
         "Other string inputs are treated as file paths",
@@ -66,7 +69,8 @@
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-005",
@@ -86,7 +90,8 @@
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-006",
@@ -102,7 +107,8 @@
         "Typecheck passes"
       ],
       "priority": 6,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-007",
@@ -117,7 +123,8 @@
         "Typecheck passes"
       ],
       "priority": 7,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-008",
@@ -135,7 +142,8 @@
         "Typecheck passes"
       ],
       "priority": 8,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-009",
@@ -149,7 +157,8 @@
         "Typecheck passes"
       ],
       "priority": 9,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-010",
@@ -163,7 +172,8 @@
         "Typecheck passes"
       ],
       "priority": 10,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-011",
@@ -176,7 +186,8 @@
         "Typecheck passes"
       ],
       "priority": 11,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-012",
@@ -190,7 +201,8 @@
         "Typecheck passes"
       ],
       "priority": 12,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-013",
@@ -205,7 +217,8 @@
         "Typecheck passes"
       ],
       "priority": 13,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-014",
@@ -220,7 +233,8 @@
         "Typecheck passes"
       ],
       "priority": 14,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-015",
@@ -236,7 +250,8 @@
         "Typecheck passes"
       ],
       "priority": 15,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-016",
@@ -246,20 +261,21 @@
         "Exported from the main entry point (`openapi-mocks`)",
         "Signature: `createMockClient(spec: SpecInput, options?: GlobalOptions): MockClient`",
         "`MockClient` is an object (not a class) with at least a `.data()` method",
-        "`.data()` accepts per-call options and returns `Promise\u003cMap\u003cstring, Map\u003cnumber, unknown\u003e\u003e\u003e` keyed by operation ID then status code",
+        "`.data()` accepts per-call options and returns `Promise<Map<string, Map<number, unknown>>>` keyed by operation ID then status code",
         "Global options supported: `seed`, `ignoreExamples`",
         "Per-call `.data()` options supported: `operations` (an object keyed by operation ID, each with optional `arrayLengths`, `transform`, `statusCode`), `statusCodes` (array of status codes to include)",
         "`operations` acts as a filter: when provided, only the listed operation IDs are generated",
         "When `operations` is omitted, all operations in the spec are generated",
         "Default status code behavior: return the lowest 2xx response defined for each operation",
         "`statusCodes` option allows requesting additional status codes (e.g. `[200, 422]`)",
-        "`transform` callback per operation receives generated data and returns a new object (the canonical examples show `(data) =\u003e ({ ...data, name: \"Jane Doe\" })`)",
+        "`transform` callback per operation receives generated data and returns a new object (the canonical examples show `(data) => ({ ...data, name: \"Jane Doe\" })`)",
         "`arrayLengths` per operation controls array sizes; value is a tuple `[min, max]` keyed by dot-path property name (e.g. `{ users: [5, 5] }` pins to exactly 5)",
         "Unit tests covering the scenarios from `mock-data-example.ts`: all-operations generation, scoped operations, multiple status codes, transforms, ignoreExamples",
         "Typecheck passes"
       ],
       "priority": 16,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-017",
@@ -268,7 +284,7 @@
       "acceptanceCriteria": [
         "`arrayLengths` accepts an object where keys are dot-notation paths (e.g. `\"users\"`, `\"users[*].addresses\"`) and values are `[min, max]` tuples",
         "When a tuple has equal values (e.g. `[3, 3]`), exactly that many items are generated",
-        "When min \u003c max (e.g. `[1, 3]`), a random count within the range is generated (seeded)",
+        "When min < max (e.g. `[1, 3]`), a random count within the range is generated (seeded)",
         "Schema-level `minItems` and `maxItems` constraints are respected: the effective range is the intersection of the `arrayLengths` tuple and the schema constraints",
         "When no `arrayLengths` is specified and no schema constraints exist, arrays default to a random length between 0–5 (seeded)",
         "Wildcard bracket notation `[*]` in the path targets arrays nested within each element (as shown in the Playwright example: `\"users[*].addresses\": [1, 1]`)",
@@ -276,7 +292,8 @@
         "Typecheck passes"
       ],
       "priority": 17,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-018",
@@ -291,7 +308,8 @@
         "Typecheck passes"
       ],
       "priority": 18,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-019",
@@ -306,7 +324,8 @@
         "Typecheck passes"
       ],
       "priority": 19,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-020",
@@ -314,7 +333,7 @@
       "description": "As a library consumer, I want the same `createMockClient` from `openapi-mocks` to expose a `.handlers()` method that returns MSW v2 handler objects, with MSW lazily loaded at call time.",
       "acceptanceCriteria": [
         "`.handlers()` is a method on the same `MockClient` object returned by `createMockClient` (exported from `openapi-mocks` — no separate subpath export)",
-        "`.handlers()` returns `Promise\u003cHttpHandler[]\u003e` (MSW v2 `http.get`, `http.post`, etc.)",
+        "`.handlers()` returns `Promise<HttpHandler[]>` (MSW v2 `http.get`, `http.post`, etc.)",
         "MSW (`msw`) is a peer dependency and is lazily loaded via dynamic `import(\"msw\")` inside `.handlers()` — consumers who only use `.data()` or `generateFromSchema` never need MSW installed",
         "If MSW is not installed when `.handlers()` is called, the library throws a descriptive error at call time directing the consumer to install `msw` (e.g. `\"openapi-mocks: .handlers() requires msw. Install it with: npm install msw\"`)",
         "Each handler corresponds to one operation in the spec (or filtered subset via `operations`)",
@@ -327,7 +346,8 @@
         "Typecheck passes"
       ],
       "priority": 20,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-021",
@@ -341,14 +361,15 @@
         "Typecheck passes"
       ],
       "priority": 21,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-022",
       "title": "Implement per-operation responseTransform with request access in MSW handlers",
       "description": "As a library consumer, I want per-operation transform callbacks in `.handlers()` to receive both the generated data and the intercepted MSW request, so I can implement request-aware logic like pagination.",
       "acceptanceCriteria": [
-        "The `transform` callback for `.handlers()` has signature `(data: Record\u003cstring, unknown\u003e, request: Request) =\u003e Record\u003cstring, unknown\u003e` (the MSW `Request` object)",
+        "The `transform` callback for `.handlers()` has signature `(data: Record<string, unknown>, request: Request) => Record<string, unknown>` (the MSW `Request` object)",
         "The callback receives a copy of the generated data (not a reference to the internal object)",
         "The returned object replaces the response body entirely",
         "If the callback returns `undefined`, the original generated data is used",
@@ -357,7 +378,8 @@
         "Typecheck passes"
       ],
       "priority": 22,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-023",
@@ -372,7 +394,8 @@
         "Typecheck passes"
       ],
       "priority": 23,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-024",
@@ -387,7 +410,8 @@
         "Typecheck passes"
       ],
       "priority": 24,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-025",
@@ -402,7 +426,8 @@
         "Typecheck passes"
       ],
       "priority": 25,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-026",
@@ -417,7 +442,8 @@
         "Typecheck passes"
       ],
       "priority": 26,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-027",
@@ -432,7 +458,8 @@
         "Typecheck passes"
       ],
       "priority": 27,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-028",
@@ -448,7 +475,8 @@
         "Typecheck passes"
       ],
       "priority": 28,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-029",
@@ -461,11 +489,12 @@
         "Includes a Playwright config and at least 2 test files demonstrating: happy-path list rendering with fixed array lengths, path-param echoing, per-operation transform, and error response (422)",
         "Follows the patterns from `playwright-example.ts` (canonical API usage)",
         "Has a `README.md` explaining how to install, run, and understand the example",
-        "`pnpm install \u0026\u0026 pnpm test` in the example directory succeeds (installs `openapi-mocks` from the local workspace or npm)",
+        "`pnpm install && pnpm test` in the example directory succeeds (installs `openapi-mocks` from the local workspace or npm)",
         "Typecheck passes"
       ],
       "priority": 29,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-030",
@@ -478,11 +507,12 @@
         "Server script iterates over the spec's paths and operations, calls `createMockClient.data()` for each, and registers corresponding HTTP routes",
         "Demonstrates: basic route registration, path parameter handling, hitting the server with `curl` examples in the README",
         "Has a `README.md` explaining the use case, how to run, and caveats (no statefulness, no request validation)",
-        "`pnpm install \u0026\u0026 pnpm start` in the example directory starts the server",
+        "`pnpm install && pnpm start` in the example directory starts the server",
         "Typecheck passes"
       ],
       "priority": 30,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-031",
@@ -498,7 +528,8 @@
         "Typecheck passes"
       ],
       "priority": 31,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-032",
@@ -513,7 +544,8 @@
         "Typecheck passes"
       ],
       "priority": 32,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-033",
@@ -526,7 +558,8 @@
         "Typecheck passes"
       ],
       "priority": 33,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-034",
@@ -540,7 +573,8 @@
         "Typecheck passes"
       ],
       "priority": 34,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-035",
@@ -554,7 +588,8 @@
         "Typecheck passes"
       ],
       "priority": 35,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-036",
@@ -567,7 +602,8 @@
         "Typecheck passes"
       ],
       "priority": 36,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-037",
@@ -581,7 +617,8 @@
         "Typecheck passes"
       ],
       "priority": 37,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-038",
@@ -595,7 +632,8 @@
         "Typecheck passes"
       ],
       "priority": 38,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-039",
@@ -609,7 +647,8 @@
         "Typecheck passes"
       ],
       "priority": 39,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-040",
@@ -624,7 +663,8 @@
         "Typecheck passes"
       ],
       "priority": 40,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     }
   ]
 }
