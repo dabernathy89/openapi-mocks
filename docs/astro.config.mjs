@@ -27,7 +27,9 @@ export default defineConfig({
       sidebar: [
         {
           label: 'Guides',
-          items: [],
+          items: [
+            { label: 'Configuration', slug: 'guides/configuration' },
+          ],
         },
         {
           label: 'Examples',

@@ -1,3 +1,15 @@
+## 2026-02-18 - US-036
+- What was implemented: Configuration guide page documenting all global and per-operation options
+- Files changed:
+  - `docs/src/content/docs/guides/configuration.md` — new guide page covering: `seed`, `baseUrl`, `ignoreExamples`, `statusCodes`, `echoPathParams`, `maxDepth` (global options) and `statusCode`, `transform`, `arrayLengths`, `overrides` (per-operation options); each option has type signature, default value, description, and code example; organized with Global / Per-Operation headings plus a summary table
+  - `docs/astro.config.mjs` — added Configuration page to the Guides sidebar group
+  - `.chief/prds/main/prd.json` — marked US-036 as passes: true
+- **Learnings for future iterations:**
+  - The Guides sidebar group was empty (`items: []`) — just add entries using `{ label: 'Name', slug: 'guides/page' }` format (same as Examples)
+  - Creating `docs/src/content/docs/guides/` directory is required before writing the first guide file (no auto-creation)
+  - `astro check` exits 0 even with the duplicate-ID starlight-typedoc warnings — only real TS/Astro errors fail the check
+---
+
 ## 2026-02-18 - US-035
 - What was implemented: Standalone mock server example documentation page
 - Files changed:
