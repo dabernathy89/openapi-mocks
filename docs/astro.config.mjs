@@ -13,6 +13,9 @@ export default defineConfig({
           lang: 'en',
         },
       },
+      components: {
+        Footer: './src/components/Footer.astro',
+      },
       plugins: [
         starlightTypeDoc({
           entryPoints: ['../packages/openapi-mocks/src/index.ts'],

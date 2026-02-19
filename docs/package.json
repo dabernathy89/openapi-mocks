@@ -5,7 +5,7 @@
   "description": "Documentation site for openapi-mocks",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && node scripts/copy-md-sources.js",
     "preview": "astro preview",
     "typecheck": "astro check"
   },
