@@ -30,6 +30,7 @@ export default defineConfig({
           items: [
             { label: 'Configuration', slug: 'guides/configuration' },
             { label: 'Schema Composition', slug: 'guides/composition' },
+            { label: 'Faker Extensions', slug: 'guides/faker-extensions' },
           ],
         },
         {

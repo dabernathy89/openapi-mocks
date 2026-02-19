@@ -1,3 +1,14 @@
+## 2026-02-18 - US-038
+- What was implemented: Faker Extensions guide page explaining `x-faker-method` OpenAPI extension
+- Files changed:
+  - `docs/src/content/docs/guides/faker-extensions.md` — new guide covering: what `x-faker-method` is and when to use it, syntax (dot-path strings), priority chain position, table of ~30 example Faker dot-paths with sample output, before/after walkthrough adding the extension to a product schema, seeding for deterministic output, error handling for invalid dot-paths, overriding `x-faker-method` per-call via `overrides`
+  - `docs/astro.config.mjs` — added Faker Extensions page to the Guides sidebar group
+  - `.chief/prds/main/prd.json` — marked US-038 as passes: true
+- **Learnings for future iterations:**
+  - Sidebar entry format remains: `{ label: 'Name', slug: 'guides/page' }` — consistent across all guide pages
+  - Duplicate ID warnings from starlight-typedoc remain non-fatal on every `astro check` run
+---
+
 ## 2026-02-18 - US-037
 - What was implemented: Composition guide page explaining allOf, oneOf, anyOf handling, discriminator support, and nullable schema differences between OpenAPI versions
 - Files changed:
