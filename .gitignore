@@ -56,3 +56,5 @@ CHANGELOG.md
 
 # Tool internals
 .chief/prds/*/claude.log
+docs/.wrangler/tmp
+.claude/settings.local.json

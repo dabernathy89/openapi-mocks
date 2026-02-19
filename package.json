@@ -13,7 +13,8 @@
     "docs:dev": "pnpm --filter openapi-mocks-docs dev",
     "docs:build": "pnpm --filter openapi-mocks-docs build",
     "docs:preview": "pnpm --filter openapi-mocks-docs preview",
-    "docs:typecheck": "pnpm --filter openapi-mocks-docs typecheck"
+    "docs:typecheck": "pnpm --filter openapi-mocks-docs typecheck",
+    "docs:serve": "pnpm --filter openapi-mocks-docs serve"
   },
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",
