@@ -1,3 +1,15 @@
+## 2026-02-18 - US-035
+- What was implemented: Standalone mock server example documentation page
+- Files changed:
+  - `docs/src/content/docs/examples/mock-server.md` — new guide page covering: use case, project setup, core `.data()` per-route pattern, registering routes from the spec, path parameter handling via `transform`, status code selection (201), array length control, curl examples, seeded vs. live data, caveats (no statefulness, no request validation)
+  - `docs/astro.config.mjs` — added mock-server page to the Examples sidebar group
+  - `.chief/prds/main/prd.json` — marked US-035 as passes: true
+- **Learnings for future iterations:**
+  - The Examples sidebar entries use `{ label: 'Name', slug: 'examples/page' }` format (slug, not link) — consistent with the playwright entry added in US-034
+  - Docs content for examples should reference `examples/mock-server/` directory links and cross-link to related examples (Playwright page links to mock-server and vice-versa)
+  - Duplicate ID warnings from `starlight-typedoc` are non-fatal and expected — they appear on every `astro check` run
+---
+
 ## 2026-02-18 - US-034
 - What was implemented: Playwright E2E example documentation page
 - Files changed:
