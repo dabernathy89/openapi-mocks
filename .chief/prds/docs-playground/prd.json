@@ -60,8 +60,7 @@
         "`types.ts` exports `HandlerInfo`, `FetchResult`, and `EvalResult` TypeScript interfaces"
       ],
       "priority": 4,
-      "passes": false,
-      "inProgress": true
+      "passes": true
     },
     {
       "id": "US-005",

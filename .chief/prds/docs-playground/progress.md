@@ -8,6 +8,26 @@
 
 ---
 
+## 2026-02-18 - US-004
+- What was implemented: Created `docs/src/pages/playground.astro` as a standalone Astro page using `StarlightPage`. Created `docs/src/components/playground/` directory with all required stub files: `Playground.vue`, `SpecEditor.vue`, `CodeEditor.vue`, `HandlerAccordion.vue`, `HandlerRow.vue`, `usePlayground.ts`, `sample-spec.ts`, `default-code.ts`, `types.ts`.
+- Files changed:
+  - `docs/src/pages/playground.astro` (new) — standalone page at `/playground`
+  - `docs/src/components/playground/types.ts` (new) — exports `HandlerInfo`, `FetchResult`, `EvalResult`
+  - `docs/src/components/playground/Playground.vue` (new) — root component stub
+  - `docs/src/components/playground/SpecEditor.vue` (new) — controlled textarea stub
+  - `docs/src/components/playground/CodeEditor.vue` (new) — controlled textarea stub
+  - `docs/src/components/playground/HandlerAccordion.vue` (new) — accordion stub
+  - `docs/src/components/playground/HandlerRow.vue` (new) — row stub
+  - `docs/src/components/playground/usePlayground.ts` (new) — composable stub
+  - `docs/src/components/playground/sample-spec.ts` (new) — SAMPLE_SPEC stub
+  - `docs/src/components/playground/default-code.ts` (new) — DEFAULT_CODE stub
+  - `.chief/prds/docs-playground/prd.json` — marked US-004 passes: true
+- **Learnings for future iterations:**
+  - In a `playground.astro` page, Astro infers a local type `Playground` from the filename — importing a Vue component also named `Playground` causes ts(2440) conflict. Fix: use an alias (`PlaygroundApp`) for the import.
+  - `StarlightPage` from `@astrojs/starlight/components/StarlightPage.astro` provides the site chrome (header, theme toggle) without adding the page to the sidebar or content search.
+  - `docs/src/pages/` directory did not exist — must create it before adding the Astro page file.
+---
+
 ## 2026-02-18 - US-003
 - What was implemented: Added Vue 3 + @astrojs/vue integration to the Astro docs site. Installed all required packages and added `vue()` to the integrations array in astro.config.mjs. Created a minimal VueSmokeTest.vue component. Installed CodeMirror dependencies (vue-codemirror, @codemirror/lang-yaml, @codemirror/lang-javascript, @codemirror/theme-one-dark, js-yaml).
 - Files changed:
