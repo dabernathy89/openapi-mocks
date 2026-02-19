@@ -1,3 +1,21 @@
+## 2026-02-18 - US-040
+- What was implemented: Markdown content negotiation — appending `.md` to any doc URL returns raw Markdown source; every page shows a "View as Markdown" link in the footer
+- Files changed:
+  - `docs/functions/[[path]].js` — Cloudflare Pages Function that intercepts `.md` URL requests, strips the suffix, fetches the raw markdown from `/_md/<slug>.md` static assets, and returns it with `Content-Type: text/markdown; charset=utf-8`
+  - `docs/scripts/copy-md-sources.js` — post-build Node.js script that copies all `src/content/docs/**/*.{md,mdx}` files to `dist/_md/` so the Pages Function can serve them via `ASSETS.fetch`
+  - `docs/src/components/Footer.astro` — custom Starlight Footer override that renders the default Footer then appends a "View as Markdown" link; uses `Astro.locals.starlightRoute.entry.id` to derive the `.md` URL for the current page
+  - `docs/astro.config.mjs` — added `components: { Footer: './src/components/Footer.astro' }` to register the custom Footer override
+  - `docs/package.json` — updated `build` script to run `node scripts/copy-md-sources.js` after `astro build`
+  - `.chief/prds/main/prd.json` — marked US-040 as passes: true
+- **Learnings for future iterations:**
+  - Starlight component overrides are registered in `astro.config.mjs` via `components: { ComponentName: './src/components/ComponentName.astro' }` inside the `starlight({})` call
+  - To include the default Starlight component inside an override, import it from `@astrojs/starlight/components/Footer.astro` (the real file, not the virtual module) and render it with `<Default><slot /></Default>`
+  - `Astro.locals.starlightRoute.entry.id` gives the source file path relative to `src/content/docs/` (e.g. `"guides/configuration.md"`) — strip the extension to get the URL slug
+  - Cloudflare Pages Functions live in a `functions/` directory at the project root (relative to the build output); double-bracket syntax `[[path]].js` creates a catch-all route
+  - `context.env.ASSETS.fetch(url)` is how Pages Functions fetch static assets from the built site; the URL must match a file in `dist/`
+  - The Astro `build` script can chain additional scripts with `&&` to run post-processing after Astro's build
+---
+
 ## 2026-02-18 - US-039
 - What was implemented: Smart Defaults guide page documenting the built-in property name → Faker method mapping table
 - Files changed:
