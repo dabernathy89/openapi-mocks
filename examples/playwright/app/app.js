@@ -169,6 +169,40 @@ async function renderOrderDetail(orderId) {
   }
 }
 
+async function renderCreateOrderForm() {
+  show("create-order-form");
+
+  const form = document.getElementById("create-order-form-el");
+  const errorEl = document.querySelector("[data-testid='order-error']");
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const currency = form.currency.value;
+
+    if (errorEl) {
+      errorEl.style.display = "none";
+      errorEl.textContent = "";
+    }
+
+    const res = await fetch(`${API_BASE}/orders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currency }),
+    });
+
+    if (res.status === 422) {
+      const data = await res.json();
+      if (errorEl) {
+        const msg = data.message ?? (data.fieldErrors?.[0]?.message ?? "Validation error");
+        errorEl.textContent = msg;
+        errorEl.style.display = "block";
+      }
+    } else if (res.ok) {
+      window.location.href = "/orders";
+    }
+  };
+}
+
 async function renderDashboard() {
   show("dashboard");
 
@@ -204,6 +238,8 @@ function route() {
     renderUsers();
   } else if (path === "/dashboard") {
     renderDashboard();
+  } else if (path === "/orders/new") {
+    renderCreateOrderForm();
   } else if (path.startsWith("/orders/")) {
     const orderId = path.replace("/orders/", "");
     renderOrderDetail(orderId);

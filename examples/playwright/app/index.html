@@ -63,6 +63,18 @@
       <div id="orders-container"></div>
     </div>
 
+    <div id="create-order-form" style="display:none">
+      <h1>Create Order</h1>
+      <form id="create-order-form-el">
+        <div>
+          <label for="order-currency">Currency</label>
+          <input type="text" id="order-currency" name="currency" value="USD" />
+        </div>
+        <button type="submit">Place Order</button>
+      </form>
+      <p data-testid="order-error" class="error" style="display:none"></p>
+    </div>
+
     <div id="order-detail" style="display:none">
       <h1>Order Detail</h1>
       <p><strong>ID:</strong> <span data-testid="order-id"></span></p>

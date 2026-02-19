@@ -67,7 +67,8 @@
         "Uses `mocks.handlers({ operations: { createOrder: { statusCode: 422, transform: ... } } })`"
       ],
       "priority": 4,
-      "passes": false
+      "passes": false,
+      "inProgress": true
     },
     {
       "id": "US-005",

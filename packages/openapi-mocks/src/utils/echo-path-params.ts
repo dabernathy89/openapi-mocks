@@ -45,6 +45,14 @@ function getCandidateNames(paramName: string): string[] {
     candidates.add(toCamelCase(paramName));
   }
 
+  // Also try the bare "id" suffix — common REST convention where a path param
+  // named "userId" corresponds to a response field named "id".
+  // e.g. "userId" → "id", "orderId" → "id"
+  const lowerParam = paramName.toLowerCase();
+  if (lowerParam.endsWith('id') && lowerParam !== 'id') {
+    candidates.add('id');
+  }
+
   return Array.from(candidates);
 }
 
