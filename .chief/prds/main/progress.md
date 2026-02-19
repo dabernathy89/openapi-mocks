@@ -1,3 +1,19 @@
+## 2026-02-18 - US-032
+- What was implemented: starlight-typedoc configured to auto-generate API reference pages from the library's TypeScript source
+- Files changed:
+  - `docs/package.json` — added `starlight-typedoc`, `typedoc`, and `typedoc-plugin-markdown` as devDependencies
+  - `docs/astro.config.mjs` — added `starlightTypeDoc` plugin pointing at `../packages/openapi-mocks/src/index.ts`; replaced empty "API Reference" sidebar items array with `typeDocSidebarGroup`; configured `output: 'reference'` and TypeDoc options to exclude private/internal members
+  - `pnpm-lock.yaml` — updated with new devDependencies
+  - `.chief/prds/main/prd.json` — marked US-032 as passes: true
+- **Learnings for future iterations:**
+  - `starlight-typedoc` requires `typedoc` and `typedoc-plugin-markdown` as additional dependencies — install all three together
+  - Use `typeDocSidebarGroup` exported from `starlight-typedoc` in place of the empty `items: []` array in the sidebar — it auto-populates with generated pages
+  - The `output` option controls the URL path; `output: 'reference'` → pages appear under `/reference/`
+  - `entryPoints` and `tsconfig` paths are relative to the docs directory (e.g., `'../packages/openapi-mocks/src/index.ts'`)
+  - TypeDoc generation happens at build time AND during `astro check` — the plugin runs on every invocation of Astro
+  - Generated pages are written to `./src/content/docs/reference` (content directory), which is gitignored by default — they regenerate on each build
+---
+
 ## 2026-02-18 - US-031
 - What was implemented: Astro/Starlight docs site scaffolded in `docs/` (already a workspace member)
 - Files changed:
