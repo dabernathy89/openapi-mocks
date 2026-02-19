@@ -1,3 +1,25 @@
+## 2026-02-18 - US-012
+- What was implemented: Added a "Try the Playground" CTA card to the docs homepage (`index.mdx`) in a new "Try It Now" section above "Next Steps". The card links to `/playground/` with a one-sentence description of the playground.
+- Files changed:
+  - `docs/src/content/docs/index.mdx` — added "Try It Now" `CardGrid` section with a `Card` linking to `/playground/`
+  - `.chief/prds/docs-playground/prd.json` — marked US-012 passes: true
+- **Learnings for future iterations:**
+  - Starlight `Card` components inside a `CardGrid` accept markdown link syntax in the body for linked cards
+  - The homepage uses `@astrojs/starlight/components` `Card` and `CardGrid` — no new imports needed, just use the existing import line
+  - `pnpm typecheck` (astro check) is the only quality check for `.mdx` content changes — 0 errors confirms success
+---
+
+## 2026-02-18 - US-011
+- What was implemented: Error state display is fully handled by the existing `usePlayground` + `HandlerAccordion` infrastructure. Fixed the YAML error message format to include the constructor name (`YAMLException: ...`) matching the JS eval error format (`ReferenceError: ...`). All criteria were already met by previous stories — `evalStatus` and `evalError` flow from `usePlayground` → `Playground.vue` → `HandlerAccordion`; `activeHandlers` is cleared on any error; error is cleared on success; no error logic in `HandlerRow`.
+- Files changed:
+  - `docs/src/components/playground/usePlayground.ts` — fixed YAML parse error message to use `${err.constructor.name}: ${err.message}` format
+  - `.chief/prds/docs-playground/prd.json` — marked US-011 passes: true
+- **Learnings for future iterations:**
+  - Error state infrastructure was already built during US-008/009 — US-011 was mostly verifying that the wiring was correct
+  - YAML error format must use `${err.constructor.name}: ${err.message}` (not just `err.message`) to show `YAMLException: ...`
+  - The `evalError` cleared on success happens naturally because `runEval()` sets `evalError.value = null` at the start
+---
+
 ## 2026-02-18 - US-010
 - What was implemented: Full fetch-and-display logic in `HandlerRow.vue`. On expand, fires a real `fetch()` to `http://playground.local` + substituted path. Shows loading state, then renders status code, content-type, duration, and prettified JSON body. Handles 204 No Content specially. Fetch errors show human-readable message. Each expand re-fires the fetch (no caching). `statusClass()` colors status badges by range (2xx/3xx/4xx/5xx).
 - Files changed:

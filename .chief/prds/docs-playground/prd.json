@@ -196,8 +196,7 @@
         "The homepage CTA link navigates to the playground page without a 404"
       ],
       "priority": 12,
-      "passes": false,
-      "inProgress": true
+      "passes": true
     }
   ]
 }
