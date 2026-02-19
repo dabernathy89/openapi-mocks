@@ -14,7 +14,9 @@
     "openapi-mocks": "file:../../packages/openapi-mocks"
   },
   "devDependencies": {
+    "@msw/playwright": "^0.6.4",
     "@playwright/test": "^1.50.1",
+    "msw": "^2.12.10",
     "typescript": "^5.9.3"
   }
 }
