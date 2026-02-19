@@ -8,6 +8,19 @@
 
 ---
 
+## 2026-02-18 - US-005
+- What was implemented: Filled in `sample-spec.ts` with a complete OpenAPI 3.1.0 Petshop YAML spec and `default-code.ts` with the default playground code string.
+- Files changed:
+  - `docs/src/components/playground/sample-spec.ts` — exports `SAMPLE_SPEC` with full Petshop spec: 6 operations (listPets, createPet, getPet, deletePet, listOwners, getOwner), 3 $ref schemas (Pet, Owner, Error), x-faker-method extensions, nested objects, enums, multiple response codes
+  - `docs/src/components/playground/default-code.ts` — exports `DEFAULT_CODE` calling `createMockClient(spec, { baseUrl: 'http://playground.local', seed: 42 })`
+  - `.chief/prds/docs-playground/prd.json` — marked US-005 passes: true
+- **Learnings for future iterations:**
+  - `js-yaml` is installed in `docs/node_modules` — can verify YAML parsing with `node --input-type=module` and the full path to the module
+  - Quality check for docs-only changes is just `pnpm typecheck` in the `docs/` directory (astro check), not the full library test suite
+  - The `x-faker-method` format is `namespace.methodName` (e.g. `animal.petName`, `internet.email`) matching Faker.js v9 API
+
+---
+
 ## 2026-02-18 - US-004
 - What was implemented: Created `docs/src/pages/playground.astro` as a standalone Astro page using `StarlightPage`. Created `docs/src/components/playground/` directory with all required stub files: `Playground.vue`, `SpecEditor.vue`, `CodeEditor.vue`, `HandlerAccordion.vue`, `HandlerRow.vue`, `usePlayground.ts`, `sample-spec.ts`, `default-code.ts`, `types.ts`.
 - Files changed:
