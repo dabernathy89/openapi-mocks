@@ -31,7 +31,9 @@ export default defineConfig({
         },
         {
           label: 'Examples',
-          items: [],
+          items: [
+            { label: 'Playwright E2E', slug: 'examples/playwright' },
+          ],
         },
         typeDocSidebarGroup,
       ],

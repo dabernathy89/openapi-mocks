@@ -1,3 +1,27 @@
+## 2026-02-18 - US-034
+- What was implemented: Playwright E2E example documentation page
+- Files changed:
+  - `docs/src/content/docs/examples/playwright.md` — new guide page covering: problem statement, project setup, generating mock data with `createMockClient`, wiring into Playwright via `page.route()`, complete test patterns (list rendering, nested arrays, per-test overrides via transform, path-param echoing, 422 error responses, pagination with cursor, seeding for snapshots, ignoreExamples)
+  - `docs/astro.config.mjs` — added playwright page to the Examples sidebar group
+  - `.chief/prds/main/prd.json` — marked US-034 as passes: true
+- **Learnings for future iterations:**
+  - The Examples sidebar in `astro.config.mjs` uses `slug:` (not `link:`) for internal page references — use `{ label: 'Name', slug: 'examples/page' }` format
+  - Docs content lives in `docs/src/content/docs/`; subdirectories map directly to URL paths (e.g., `examples/playwright.md` → `/examples/playwright/`)
+  - The `pnpm --filter docs` filter does NOT work — use `--filter openapi-mocks-docs` (the package name in docs/package.json)
+---
+
+## 2026-02-18 - US-033
+- What was implemented: Landing page / quick start content for the docs site
+- Files changed:
+  - `docs/src/content/docs/index.mdx` — rewrote with: hero section, three use-case cards (Tests, Storybook, Local dev), tabbed install blocks (npm/pnpm/yarn/bun), MSW peer dependency install tabs, two code examples (mock data only and MSW handlers), Next Steps CardGrid linking to guides/examples/reference
+- **Learnings for future iterations:**
+  - Starlight's built-in `Tabs`, `TabItem`, `Card`, `CardGrid` components are imported from `@astrojs/starlight/components` — available in any `.mdx` file without extra config
+  - `template: splash` in the frontmatter activates Starlight's landing page layout (hero banner + wide content area)
+  - `astro check` (typecheck) runs the TypeDoc plugin and re-generates reference pages each time — duplicate ID warnings are expected and non-fatal
+  - Code examples in MDX use standard triple-backtick fences with language tags — they render correctly in Starlight's code block component
+  - The `hero.actions` array in frontmatter controls the CTA buttons on splash pages; `variant: primary` highlights the first button
+---
+
 ## 2026-02-18 - US-032
 - What was implemented: starlight-typedoc configured to auto-generate API reference pages from the library's TypeScript source
 - Files changed:
