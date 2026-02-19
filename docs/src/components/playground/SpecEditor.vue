@@ -1,11 +1,75 @@
 <script setup lang="ts">
-defineProps<{ modelValue: string }>();
-defineEmits<{ 'update:modelValue': [value: string] }>();
+import { Codemirror } from 'vue-codemirror';
+import { yaml } from '@codemirror/lang-yaml';
+import { oneDark } from '@codemirror/theme-one-dark';
+import { EditorView } from '@codemirror/view';
+
+const props = defineProps<{ modelValue: string }>();
+const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
+
+const extensions = [yaml(), oneDark, EditorView.lineWrapping];
+
+function handleChange(value: string) {
+  emit('update:modelValue', value);
+}
 </script>
 
 <template>
   <div class="spec-editor">
-    <h3>OpenAPI Spec</h3>
-    <textarea :value="modelValue" @input="$emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)" />
+    <div class="panel-header">
+      <span class="panel-label">OpenAPI Spec</span>
+      <span class="panel-note">Parsed by js-yaml — $refs are resolved at eval time</span>
+    </div>
+    <div class="editor-wrap">
+      <Codemirror
+        :model-value="props.modelValue"
+        :extensions="extensions"
+        @update:model-value="handleChange"
+      />
+    </div>
   </div>
 </template>
+
+<style scoped>
+.spec-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: #21252b;
+  border-bottom: 1px solid #3e4451;
+  flex-shrink: 0;
+}
+
+.panel-label {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #abb2bf;
+}
+
+.panel-note {
+  font-size: 0.75rem;
+  color: #5c6370;
+  font-family: monospace;
+}
+
+.editor-wrap {
+  flex: 1;
+  overflow: auto;
+}
+
+.editor-wrap :deep(.cm-editor) {
+  height: 100%;
+}
+
+.editor-wrap :deep(.cm-scroller) {
+  overflow: auto;
+}
+</style>
