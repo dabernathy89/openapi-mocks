@@ -31,6 +31,7 @@ export default defineConfig({
             { label: 'Configuration', slug: 'guides/configuration' },
             { label: 'Schema Composition', slug: 'guides/composition' },
             { label: 'Faker Extensions', slug: 'guides/faker-extensions' },
+            { label: 'Smart Defaults', slug: 'guides/smart-defaults' },
           ],
         },
         {

@@ -1,6 +1,6 @@
 {
   "project": "openapi-mocks",
-  "description": "`openapi-mocks` is a TypeScript library that parses OpenAPI 3.0.x / 3.1.x documents and generates realistic mock data and pre-built MSW (Mock Service Worker) v2 request handlers. Consumers get spec-compliant fake data for tests, stories, and local dev \u2014 all from a single OpenAPI source of truth. The project ships as a pnpm monorepo containing the library source, a documentation site (Astro/Starlight), and runnable example projects. The library is published as a single npm package (`openapi-mocks`) with a single entry point. The `createMockClient` factory exposes both `.data()` and `.handlers()` on the same client object. MSW is lazily loaded only when `.handlers()` is called \u2014 consumers who only need raw mock data never touch MSW.",
+  "description": "`openapi-mocks` is a TypeScript library that parses OpenAPI 3.0.x / 3.1.x documents and generates realistic mock data and pre-built MSW (Mock Service Worker) v2 request handlers. Consumers get spec-compliant fake data for tests, stories, and local dev — all from a single OpenAPI source of truth. The project ships as a pnpm monorepo containing the library source, a documentation site (Astro/Starlight), and runnable example projects. The library is published as a single npm package (`openapi-mocks`) with a single entry point. The `createMockClient` factory exposes both `.data()` and `.handlers()` on the same client object. MSW is lazily loaded only when `.handlers()` is called — consumers who only need raw mock data never touch MSW.",
   "userStories": [
     {
       "id": "US-001",
@@ -26,9 +26,9 @@
       "description": "As a developer, I need the library package to build with Vite in library mode so that it produces consumable ESM and CJS bundles.",
       "acceptanceCriteria": [
         "`packages/openapi-mocks/vite.config.ts` configured with `build.lib` targeting the package entry points",
-        "Build produces ESM (`.js`) output in `dist/`; also produces CJS (`.cjs`) output if Vite's library mode supports it cleanly \u2014 otherwise ESM-only is acceptable",
+        "Build produces ESM (`.js`) output in `dist/`; also produces CJS (`.cjs`) output if Vite's library mode supports it cleanly — otherwise ESM-only is acceptable",
         "TypeScript declarations (`.d.ts`) are generated alongside the JS output (via `vite-plugin-dts` or `tsc --emitDeclarationOnly`)",
-        "`package.json` has `exports` map with `\".\"` pointing to the single entry point (with `import`, `require` if CJS is included, and `types` conditions). There is no `\"./msw\"` subpath \u2014 MSW is lazily loaded at call time when `.handlers()` is invoked.",
+        "`package.json` has `exports` map with `\".\"` pointing to the single entry point (with `import`, `require` if CJS is included, and `types` conditions). There is no `\"./msw\"` subpath — MSW is lazily loaded at call time when `.handlers()` is invoked.",
         "`pnpm build` in the package directory succeeds and produces the expected files",
         "Typecheck passes"
       ],
@@ -80,7 +80,7 @@
         "`@faker-js/faker` installed as a direct dependency",
         "Internal module (e.g. `src/generators/type-fallback.ts`) exports a function that accepts a schema object and a Faker instance, and returns a generated value",
         "Handles all OpenAPI types: `string`, `number`, `integer`, `boolean`, `array`, `object`",
-        "Handles common string formats: `date-time` \u2192 ISO date string, `date` \u2192 date string, `email` \u2192 email, `uri` / `url` \u2192 URL, `uuid` \u2192 UUID, `hostname` \u2192 hostname, `ipv4` \u2192 IPv4, `ipv6` \u2192 IPv6, `byte` \u2192 base64 string",
+        "Handles common string formats: `date-time` → ISO date string, `date` → date string, `email` → email, `uri` / `url` → URL, `uuid` → UUID, `hostname` → hostname, `ipv4` → IPv4, `ipv6` → IPv6, `byte` → base64 string",
         "`number` respects `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, and `multipleOf` constraints",
         "`integer` respects `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, and `multipleOf` constraints; generates within `int32` range by default, full `int64` range when `format: \"int64\"`",
         "`string` respects `minLength`, `maxLength`, and `pattern` (best-effort; pattern support can use `faker.helpers.fromRegExp` or fall back to a plain string with a logged warning)",
@@ -99,7 +99,7 @@
       "description": "As a developer, I need a curated mapping of common property names to Faker methods, so that generated data is realistic without requiring `x-faker-method` on every field.",
       "acceptanceCriteria": [
         "Internal module (e.g. `src/generators/smart-defaults.ts`) exports a lookup structure (Map or plain object) mapping property name strings to Faker dot-paths",
-        "At least 30 mappings covering common names. Examples: `firstName` / `first_name` \u2192 `person.firstName`, `lastName` / `last_name` \u2192 `person.lastName`, `email` \u2192 `internet.email`, `phone` / `phoneNumber` / `phone_number` \u2192 `phone.number`, `avatar` / `avatarUrl` / `avatar_url` \u2192 `image.avatar`, `username` / `userName` / `user_name` \u2192 `internet.username`, `url` / `website` \u2192 `internet.url`, `address` / `streetAddress` / `street_address` \u2192 `location.streetAddress`, `city` \u2192 `location.city`, `state` \u2192 `location.state`, `zip` / `zipCode` / `zip_code` / `postalCode` / `postal_code` \u2192 `location.zipCode`, `country` \u2192 `location.country`, `latitude` / `lat` \u2192 `location.latitude`, `longitude` / `lng` / `lon` \u2192 `location.longitude`, `title` \u2192 `lorem.sentence`, `description` / `summary` / `bio` \u2192 `lorem.paragraph`, `name` / `fullName` / `full_name` \u2192 `person.fullName`, `company` / `companyName` / `company_name` \u2192 `company.name`, `createdAt` / `created_at` \u2192 `date.past`, `updatedAt` / `updated_at` \u2192 `date.recent`, `id` \u2192 `string.uuid`, `slug` \u2192 `lorem.slug`, `color` \u2192 `color.rgb`, `price` / `amount` \u2192 `commerce.price`, `currency` \u2192 `finance.currencyCode`, `imageUrl` / `image_url` / `image` / `photo` \u2192 `image.url`",
+        "At least 30 mappings covering common names. Examples: `firstName` / `first_name` → `person.firstName`, `lastName` / `last_name` → `person.lastName`, `email` → `internet.email`, `phone` / `phoneNumber` / `phone_number` → `phone.number`, `avatar` / `avatarUrl` / `avatar_url` → `image.avatar`, `username` / `userName` / `user_name` → `internet.username`, `url` / `website` → `internet.url`, `address` / `streetAddress` / `street_address` → `location.streetAddress`, `city` → `location.city`, `state` → `location.state`, `zip` / `zipCode` / `zip_code` / `postalCode` / `postal_code` → `location.zipCode`, `country` → `location.country`, `latitude` / `lat` → `location.latitude`, `longitude` / `lng` / `lon` → `location.longitude`, `title` → `lorem.sentence`, `description` / `summary` / `bio` → `lorem.paragraph`, `name` / `fullName` / `full_name` → `person.fullName`, `company` / `companyName` / `company_name` → `company.name`, `createdAt` / `created_at` → `date.past`, `updatedAt` / `updated_at` → `date.recent`, `id` → `string.uuid`, `slug` → `lorem.slug`, `color` → `color.rgb`, `price` / `amount` → `commerce.price`, `currency` → `finance.currencyCode`, `imageUrl` / `image_url` / `image` / `photo` → `image.url`",
         "Export a function like `getSmartDefault(propertyName: string): string | undefined` that returns the Faker dot-path or `undefined` if no match",
         "Matching is case-insensitive and supports both camelCase and snake_case variants",
         "Smart default is skipped if the schema's `type` conflicts with the Faker method's output type (e.g. property named `email` with `type: integer` should NOT use `internet.email`). The function accepts the schema type so it can do this check.",
@@ -118,7 +118,7 @@
         "The `openapi-types` schema interfaces are extended (via declaration merging or a local extended type) to include an optional `x-faker-method?: string` field",
         "Internal function (e.g. in `src/generators/faker-extension.ts`) accepts a Faker instance and a dot-path string (e.g. `\"internet.email\"`, `\"image.avatar\"`, `\"lorem.paragraphs\"`) and calls the corresponding Faker method",
         "Supports any valid Faker dot-path (at least two levels deep, e.g. `module.method`)",
-        "Throws a descriptive error if the dot-path does not resolve to a callable function on the Faker instance (e.g. `\"nonexistent.method\"` \u2192 error naming the invalid path)",
+        "Throws a descriptive error if the dot-path does not resolve to a callable function on the Faker instance (e.g. `\"nonexistent.method\"` → error naming the invalid path)",
         "Unit tests: valid dot-path returns a value, invalid dot-path throws with a helpful message, method with no arguments works, nested path works",
         "Typecheck passes"
       ],
@@ -129,14 +129,14 @@
     {
       "id": "US-008",
       "title": "Implement schema walker with generation priority chain",
-      "description": "As a developer, I need the core schema-walking engine that traverses an OpenAPI schema object, applies the resolution priority chain (overrides \u2192 examples \u2192 x-faker-method \u2192 smart defaults \u2192 type fallback), and returns a generated value.",
+      "description": "As a developer, I need the core schema-walking engine that traverses an OpenAPI schema object, applies the resolution priority chain (overrides → examples → x-faker-method → smart defaults → type fallback), and returns a generated value.",
       "acceptanceCriteria": [
         "Internal module (e.g. `src/generators/schema-walker.ts`) exports an async function like `generateValueForSchema(schema, options): unknown`",
         "Options include: `overrides`, `fakerOnly` (called `ignoreExamples` in canonical examples), `seed`, `propertyName` (for smart-default lookup), and a Faker instance",
         "Priority chain is: (1) if an override exists for this path, use it; (2) if `ignoreExamples` is false and the schema has `example` or `default`, use it; (3) if `x-faker-method` is present, call it; (4) if property name matches a smart default and type doesn't conflict, use it; (5) fall back to type-based generation",
         "For `type: \"object\"`: iterate over `properties`, recursively generate each, respect `required` array (optional properties may be randomly omitted)",
-        "For `type: \"array\"`: generate `items` repeatedly; default length is random between 0\u20135 (seeded); respects `minItems` and `maxItems` constraints",
-        "Handles schemas with no `type` field (infer from `properties` \u2192 object, `items` \u2192 array, etc.)",
+        "For `type: \"array\"`: generate `items` repeatedly; default length is random between 0–5 (seeded); respects `minItems` and `maxItems` constraints",
+        "Handles schemas with no `type` field (infer from `properties` → object, `items` → array, etc.)",
         "Returns `null` for nullable schemas with random probability (seeded)",
         "Unit tests: each priority level wins over lower ones, object generation, array generation, nullable handling, optional field omission",
         "Typecheck passes"
@@ -196,7 +196,7 @@
       "acceptanceCriteria": [
         "`nullable: true` in 3.0.x schemas is treated equivalently to `type: [\"string\", \"null\"]` (or whatever the base type is) in 3.1.x",
         "`type` as an array (3.1.x, e.g. `type: [\"string\", \"null\"]`) is handled: the non-null type is used for generation, and the value may be `null` with random probability (seeded)",
-        "`$ref` siblings in 3.1.x (keywords alongside `$ref`) are respected \u2014 though Swagger Parser should resolve these, the walker doesn't discard sibling keywords",
+        "`$ref` siblings in 3.1.x (keywords alongside `$ref`) are respected — though Swagger Parser should resolve these, the walker doesn't discard sibling keywords",
         "Unit tests: 3.0.x nullable schema, 3.1.x array-type nullable schema, both produce correct nullable behavior",
         "Typecheck passes"
       ],
@@ -286,7 +286,7 @@
         "When a tuple has equal values (e.g. `[3, 3]`), exactly that many items are generated",
         "When min < max (e.g. `[1, 3]`), a random count within the range is generated (seeded)",
         "Schema-level `minItems` and `maxItems` constraints are respected: the effective range is the intersection of the `arrayLengths` tuple and the schema constraints",
-        "When no `arrayLengths` is specified and no schema constraints exist, arrays default to a random length between 0\u20135 (seeded)",
+        "When no `arrayLengths` is specified and no schema constraints exist, arrays default to a random length between 0–5 (seeded)",
         "Wildcard bracket notation `[*]` in the path targets arrays nested within each element (as shown in the Playwright example: `\"users[*].addresses\": [1, 1]`)",
         "Unit tests: exact length, range, schema constraint intersection, default length, nested wildcard path",
         "Typecheck passes"
@@ -332,14 +332,14 @@
       "title": "Implement createMockClient .handlers() method (MSW handler generation)",
       "description": "As a library consumer, I want the same `createMockClient` from `openapi-mocks` to expose a `.handlers()` method that returns MSW v2 handler objects, with MSW lazily loaded at call time.",
       "acceptanceCriteria": [
-        "`.handlers()` is a method on the same `MockClient` object returned by `createMockClient` (exported from `openapi-mocks` \u2014 no separate subpath export)",
+        "`.handlers()` is a method on the same `MockClient` object returned by `createMockClient` (exported from `openapi-mocks` — no separate subpath export)",
         "`.handlers()` returns `Promise<HttpHandler[]>` (MSW v2 `http.get`, `http.post`, etc.)",
-        "MSW (`msw`) is a peer dependency and is lazily loaded via dynamic `import(\"msw\")` inside `.handlers()` \u2014 consumers who only use `.data()` or `generateFromSchema` never need MSW installed",
+        "MSW (`msw`) is a peer dependency and is lazily loaded via dynamic `import(\"msw\")` inside `.handlers()` — consumers who only use `.data()` or `generateFromSchema` never need MSW installed",
         "If MSW is not installed when `.handlers()` is called, the library throws a descriptive error at call time directing the consumer to install `msw` (e.g. `\"openapi-mocks: .handlers() requires msw. Install it with: npm install msw\"`)",
         "Each handler corresponds to one operation in the spec (or filtered subset via `operations`)",
         "The HTTP method and URL path are derived from the operation's method and path in the spec, prefixed by `baseUrl`",
         "Each handler's resolver calls the core data generation pipeline and returns a JSON response with the generated body, correct status code, and `Content-Type: application/json`",
-        "`baseUrl` global option is prepended to every handler's URL pattern (e.g. `baseUrl: \"https://api.acme.dev/v1\"` + path `/users` \u2192 handler matches `https://api.acme.dev/v1/users`)",
+        "`baseUrl` global option is prepended to every handler's URL pattern (e.g. `baseUrl: \"https://api.acme.dev/v1\"` + path `/users` → handler matches `https://api.acme.dev/v1/users`)",
         "Per-operation options supported: `statusCode`, `transform`, `arrayLengths` (same as `.data()`)",
         "Global options supported: `seed`, `baseUrl`, `echoPathParams`, `ignoreExamples`, `statusCodes`",
         "Unit tests: generates correct number of handlers, handler URL matches spec path with baseUrl, handler responds with JSON, status code matches, per-operation statusCode override works, calling `.handlers()` without MSW installed throws a helpful error",
@@ -373,7 +373,7 @@
         "The callback receives a copy of the generated data (not a reference to the internal object)",
         "The returned object replaces the response body entirely",
         "If the callback returns `undefined`, the original generated data is used",
-        "The request object provides access to URL, query params, headers, and body \u2014 enabling pagination, filtering, and similar patterns",
+        "The request object provides access to URL, query params, headers, and body — enabling pagination, filtering, and similar patterns",
         "Unit tests covering the pagination example from `playwright-example.ts`: transform reads `cursor` query param and sets `page`, `nextPage`, `totalPages` accordingly",
         "Typecheck passes"
       ],
@@ -467,7 +467,7 @@
       "description": "As a library consumer, I need clean, well-typed exports from the package's single entry point.",
       "acceptanceCriteria": [
         "`packages/openapi-mocks/src/index.ts` exports: `createMockClient`, `generateFromSchema`, and all public option/result types (`GlobalOptions`, `MockClient`, `GenerateFromSchemaOptions`, etc.)",
-        "There is no separate `src/msw.ts` entry point \u2014 the `.handlers()` method lives on the `MockClient` object and lazily imports MSW at call time",
+        "There is no separate `src/msw.ts` entry point — the `.handlers()` method lives on the `MockClient` object and lazily imports MSW at call time",
         "All exported types have TSDoc comments describing their purpose and fields",
         "No internal implementation types are exported",
         "A consumer can `import { createMockClient, generateFromSchema } from \"openapi-mocks\"` and get correct types with no `any` leaks",
@@ -641,13 +641,14 @@
       "description": "As a docs reader, I want to see the full curated mapping table so I know which property names get realistic data automatically.",
       "acceptanceCriteria": [
         "`docs/src/content/docs/guides/smart-defaults.md`",
-        "Contains the full mapping table (property name \u2192 Faker method) from US-006",
+        "Contains the full mapping table (property name → Faker method) from US-006",
         "Explains the type-conflict skip behavior",
         "Advises when to use `x-faker-method` instead",
         "Typecheck passes"
       ],
       "priority": 39,
-      "passes": false
+      "passes": false,
+      "inProgress": true
     },
     {
       "id": "US-040",
