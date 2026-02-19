@@ -1,3 +1,15 @@
+## 2026-02-18 - US-007
+- What was implemented: Replaced the stub `CodeEditor.vue` with a full CodeMirror 6 editor using `vue-codemirror`, `@codemirror/lang-javascript`, `@codemirror/theme-one-dark`, and `EditorView.lineWrapping`. Panel header shows label "Client Code" and a note "// createMockClient and spec are pre-injected". Component is a pure controlled input with no eval logic.
+- Files changed:
+  - `docs/src/components/playground/CodeEditor.vue` — full implementation with CodeMirror 6 JavaScript editor
+  - `.chief/prds/docs-playground/prd.json` — marked US-007 passes: true
+- **Learnings for future iterations:**
+  - `CodeEditor.vue` follows identical structure to `SpecEditor.vue` — swap `yaml()` for `javascript()` from `@codemirror/lang-javascript`
+  - `@codemirror/lang-javascript` is already installed in `docs/node_modules` (added in US-003)
+  - Panel note text must match exactly: `// createMockClient and spec are pre-injected`
+
+---
+
 ## 2026-02-18 - US-006
 - What was implemented: Replaced the stub `SpecEditor.vue` with a full CodeMirror 6 editor using `vue-codemirror`, `@codemirror/lang-yaml`, `@codemirror/theme-one-dark`, and `EditorView.lineWrapping`. Panel header shows label "OpenAPI Spec" and a note about js-yaml parsing. Component is a pure controlled input (no `usePlayground` dependency).
 - Files changed:

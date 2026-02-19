@@ -109,8 +109,7 @@
         "The component is a pure controlled input with no eval logic"
       ],
       "priority": 7,
-      "inProgress": true,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-008",
