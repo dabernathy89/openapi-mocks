@@ -1,3 +1,16 @@
+## 2026-02-18 - US-039
+- What was implemented: Smart Defaults guide page documenting the built-in property name → Faker method mapping table
+- Files changed:
+  - `docs/src/content/docs/guides/smart-defaults.md` — new guide covering: how smart defaults work (case-insensitive, snake_case-aware), full mapping table (all ~40 entries with property names, Faker methods, output types), type conflict skip behavior with compatibility rules table, when to use `x-faker-method` instead, and a complete before/after example with a User schema
+  - `docs/astro.config.mjs` — added Smart Defaults page to the Guides sidebar group
+  - `.chief/prds/main/prd.json` — marked US-039 as passes: true
+- **Learnings for future iterations:**
+  - The `smart-defaults.ts` source file exports `SMART_DEFAULTS` (the full Map) — reading it directly gives the authoritative list of all entries to document
+  - The `COMPATIBLE_SCHEMA_TYPES` object in `smart-defaults.ts` is the source of truth for type conflict rules
+  - Sidebar entry format confirmed: `{ label: 'Name', slug: 'guides/page' }` — consistent across all guide pages
+  - Duplicate ID warnings from starlight-typedoc are non-fatal and expected on every `astro check` run
+---
+
 ## 2026-02-18 - US-038
 - What was implemented: Faker Extensions guide page explaining `x-faker-method` OpenAPI extension
 - Files changed:
