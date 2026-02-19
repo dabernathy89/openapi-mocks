@@ -105,7 +105,8 @@
         "Two calls with different seeds produce different output (assert at least one field differs)"
       ],
       "priority": 6,
-      "passes": false
+      "passes": true,
+      "inProgress": false
     }
   ]
 }

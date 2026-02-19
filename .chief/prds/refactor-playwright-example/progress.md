@@ -14,6 +14,22 @@
 
 ---
 
+## 2026-02-18 - US-006
+- What was implemented: Added `e2e/library-features.spec.ts` demonstrating all uncovered library features
+  - `statusCodes filtering`: `mocks.data({ statusCodes: [200], operations: { listUsers: {}, listOrders: {} } })` — asserts only 200 status codes in result map, navigates to `/dashboard`, asserts both user-count and order-count are populated
+  - `multiple operations at once`: Single `mocks.data()` call with `listUsers`, `listOrders`, and `getOrder`; intercepts all three routes via `page.route()`; asserts each endpoint returns data
+  - `generateFromSchema — standalone utility`: Imports `generateFromSchema` directly from `openapi-mocks`; generates from an inline `Order` schema (no spec file); asserts shape and types; pure Node.js — no `page` navigation
+  - `seed reproducibility`: Creates three clients (seed 1234, seed 1234, seed 9999); asserts first two produce identical user data; asserts seed 9999 differs from seed 1234 on at least one field
+  - All 18 Playwright tests pass
+- Files changed: `examples/playwright/e2e/library-features.spec.ts`, `.chief/prds/refactor-playwright-example/prd.json`
+- **Learnings for future iterations:**
+  - `generateFromSchema` takes a raw JSON schema object (no spec file needed) — useful for unit-style assertions within Playwright tests
+  - The dashboard route (`/dashboard`) already exists in `app.js` and `index.html` with `data-testid="user-count"` and `data-testid="order-count"` — no UI changes needed for statusCodes filtering test
+  - When checking seed reproducibility, use `Promise.all` with three separate `createMockClient` instances (each with its own seed) for clean parallel generation
+  - `page.route()` URL patterns with query strings: use `**/api/v1/orders**` (with trailing glob) to catch URLs with query params; use exact path `**/api/v1/orders` (no glob) to avoid double-matching
+
+---
+
 ## 2026-02-18 - US-005
 - What was implemented: Added E2E tests for composite schema keywords
   - Created `e2e/composite-schemas.spec.ts` with three test.describe blocks:
