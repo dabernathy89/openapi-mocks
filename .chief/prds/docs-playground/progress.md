@@ -1,3 +1,16 @@
+## 2026-02-18 - US-006
+- What was implemented: Replaced the stub `SpecEditor.vue` with a full CodeMirror 6 editor using `vue-codemirror`, `@codemirror/lang-yaml`, `@codemirror/theme-one-dark`, and `EditorView.lineWrapping`. Panel header shows label "OpenAPI Spec" and a note about js-yaml parsing. Component is a pure controlled input (no `usePlayground` dependency).
+- Files changed:
+  - `docs/src/components/playground/SpecEditor.vue` — full implementation with CodeMirror 6 editor
+  - `.chief/prds/docs-playground/prd.json` — marked US-006 passes: true
+- **Learnings for future iterations:**
+  - `vue-codemirror` `<Codemirror>` component accepts `:model-value` and emits `update:model-value` — compatible with `v-model` from parent
+  - Extensions array: `[yaml(), oneDark, EditorView.lineWrapping]` — import `EditorView` from `@codemirror/view` (not from `codemirror`)
+  - Use `:deep(.cm-editor)` and `:deep(.cm-scroller)` scoped CSS selectors to style CodeMirror internals inside a scoped `<style scoped>` block
+  - `pnpm typecheck` (astro check) is the only quality check needed for docs-only Vue component changes; 0 errors confirms success
+
+---
+
 ## Codebase Patterns
 - pnpm workspaces monorepo: library at `packages/openapi-mocks/`, docs at `docs/`
 - Library uses Vite 7 in library mode, outputs ESM + CJS to `dist/`

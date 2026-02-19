@@ -94,8 +94,7 @@
         "The component does not import or depend on `usePlayground` directly; it is a pure controlled input"
       ],
       "priority": 6,
-      "passes": false,
-      "inProgress": true
+      "passes": true
     },
     {
       "id": "US-007",
