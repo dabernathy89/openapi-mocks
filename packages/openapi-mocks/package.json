@@ -20,6 +20,7 @@
   ],
   "scripts": {
     "build": "vite build",
+    "build:browser": "vite build --config vite.browser.config.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
