@@ -8,6 +8,21 @@
 
 ---
 
+## 2026-02-18 - US-002
+- What was implemented: Added order routes to the demo SPA app
+  - Added `renderOrders()` function in `app/app.js` — fetches `GET /api/v1/orders` and renders order cards with `data-testid="order-card"`
+  - Added `renderOrderDetail(orderId)` function — fetches `GET /api/v1/orders/:orderId`, renders order detail with `data-testid="order-id"`, `data-testid="order-status"`, `data-testid="order-total"`, order items with `data-testid="order-item"` + `data-item-type`, and payment method with `data-testid="payment-method"` + `data-payment-type`
+  - Extended the router to handle `/orders` and `/orders/:id` paths
+  - Added `#order-list` and `#order-detail` HTML sections to `app/index.html`
+  - Added "Orders" link to the nav in `index.html`
+- Files changed: `examples/playwright/app/app.js`, `examples/playwright/app/index.html`, `.chief/prds/refactor-playwright-example/prd.json`
+- **Learnings for future iterations:**
+  - The SPA router in `app.js` uses string matching on `window.location.pathname` — order routes must come before any general catch-all
+  - `show(id)` hides all `#app > div` children by setting `display:none`, then shows the specified one — new views need a top-level `<div id="...">` child of `#app`
+  - Payment type detection in the app uses `pm.last4 != null` to distinguish credit card from bank transfer (fields from anyOf variants)
+  - All 8 existing Playwright tests passed after adding the new routes
+---
+
 ## 2026-02-18 - US-001
 - What was implemented: Extended `examples/playwright/specs/acme-api.yaml` with composite schema keywords and order-related endpoints
   - Added `BaseEntity` schema (id, createdAt, updatedAt) as base for `allOf`
