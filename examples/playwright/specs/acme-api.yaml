@@ -66,6 +66,88 @@ paths:
               schema:
                 $ref: "#/components/schemas/ValidationError"
 
+  /orders:
+    get:
+      operationId: listOrders
+      summary: List all orders
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: A paginated list of orders
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - orders
+                  - page
+                  - totalPages
+                properties:
+                  orders:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Order"
+                  page:
+                    type: integer
+                    minimum: 1
+                  nextPage:
+                    type: ["integer", "null"]
+                    minimum: 1
+                  totalPages:
+                    type: integer
+                    minimum: 1
+    post:
+      operationId: createOrder
+      summary: Create a new order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderInput"
+      responses:
+        "201":
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+
+  /orders/{orderId}:
+    get:
+      operationId: getOrder
+      summary: Get a single order by ID
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: An order with embedded items and payment method
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetail"
+        "404":
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+
   /users/{userId}:
     get:
       operationId: getUser
@@ -205,3 +287,185 @@ components:
       properties:
         message:
           type: string
+
+    BaseEntity:
+      type: object
+      required:
+        - id
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          x-faker-method: string.uuid
+        createdAt:
+          type: string
+          format: date-time
+          x-faker-method: date.past
+        updatedAt:
+          type: string
+          format: date-time
+          x-faker-method: date.recent
+
+    Order:
+      allOf:
+        - $ref: "#/components/schemas/BaseEntity"
+        - type: object
+          required:
+            - status
+            - total
+            - currency
+          properties:
+            status:
+              type: string
+              enum:
+                - pending
+                - processing
+                - shipped
+                - delivered
+                - cancelled
+            total:
+              type: number
+              minimum: 0
+              x-faker-method: commerce.price
+            currency:
+              type: string
+              enum:
+                - USD
+                - EUR
+                - GBP
+
+    OrderDetail:
+      allOf:
+        - $ref: "#/components/schemas/Order"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/OrderItem"
+            paymentMethod:
+              $ref: "#/components/schemas/PaymentMethod"
+
+    PhysicalProduct:
+      type: object
+      required:
+        - type
+        - weight
+        - dimensions
+      properties:
+        type:
+          type: string
+          enum:
+            - physical
+        weight:
+          type: number
+          minimum: 0
+          description: Weight in kilograms
+        dimensions:
+          type: object
+          required:
+            - width
+            - height
+            - depth
+          properties:
+            width:
+              type: number
+              minimum: 0
+            height:
+              type: number
+              minimum: 0
+            depth:
+              type: number
+              minimum: 0
+
+    DigitalProduct:
+      type: object
+      required:
+        - type
+        - downloadUrl
+        - licenseKey
+      properties:
+        type:
+          type: string
+          enum:
+            - digital
+        downloadUrl:
+          type: string
+          format: uri
+          x-faker-method: internet.url
+        licenseKey:
+          type: string
+          x-faker-method: string.uuid
+
+    OrderItem:
+      oneOf:
+        - $ref: "#/components/schemas/PhysicalProduct"
+        - $ref: "#/components/schemas/DigitalProduct"
+      discriminator:
+        propertyName: type
+        mapping:
+          physical: "#/components/schemas/PhysicalProduct"
+          digital: "#/components/schemas/DigitalProduct"
+
+    CreditCard:
+      type: object
+      required:
+        - last4
+        - brand
+      properties:
+        last4:
+          type: string
+          minLength: 4
+          maxLength: 4
+          pattern: "^[0-9]{4}$"
+        brand:
+          type: string
+          enum:
+            - visa
+            - mastercard
+            - amex
+            - discover
+
+    BankTransfer:
+      type: object
+      required:
+        - accountLast4
+        - routingNumber
+      properties:
+        accountLast4:
+          type: string
+          minLength: 4
+          maxLength: 4
+          pattern: "^[0-9]{4}$"
+        routingNumber:
+          type: string
+          minLength: 9
+          maxLength: 9
+          pattern: "^[0-9]{9}$"
+
+    PaymentMethod:
+      anyOf:
+        - $ref: "#/components/schemas/CreditCard"
+        - $ref: "#/components/schemas/BankTransfer"
+
+    CreateOrderInput:
+      type: object
+      required:
+        - items
+        - paymentMethod
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        paymentMethod:
+          $ref: "#/components/schemas/PaymentMethod"
+        currency:
+          type: string
+          enum:
+            - USD
+            - EUR
+            - GBP
+          default: USD
