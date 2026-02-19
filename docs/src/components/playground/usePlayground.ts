@@ -43,7 +43,7 @@ export function usePlayground() {
       specObject = jsYaml.load(specText.value);
     } catch (err) {
       evalStatus.value = 'error';
-      evalError.value = err instanceof Error ? err.message : String(err);
+      evalError.value = err instanceof Error ? `${err.constructor.name}: ${err.message}` : String(err);
       activeHandlers.value = [];
       return;
     }

@@ -181,7 +181,7 @@
         "`Playground.vue` passes `evalError` and `evalStatus` from `usePlayground` to `HandlerAccordion` for display; no error logic lives in `HandlerRow`"
       ],
       "priority": 11,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-012",
