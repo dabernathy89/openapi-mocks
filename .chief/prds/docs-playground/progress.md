@@ -1,3 +1,15 @@
+## 2026-02-18 - US-010
+- What was implemented: Full fetch-and-display logic in `HandlerRow.vue`. On expand, fires a real `fetch()` to `http://playground.local` + substituted path. Shows loading state, then renders status code, content-type, duration, and prettified JSON body. Handles 204 No Content specially. Fetch errors show human-readable message. Each expand re-fires the fetch (no caching). `statusClass()` colors status badges by range (2xx/3xx/4xx/5xx).
+- Files changed:
+  - `docs/src/components/playground/HandlerRow.vue` — full fetch implementation with `watch(expanded, doFetch)`, result/error/loading refs, and full result display template
+  - `.chief/prds/docs-playground/prd.json` — marked US-010 passes: true
+- **Learnings for future iterations:**
+  - `watch(() => props.expanded, (val) => { if (val) doFetch() })` triggers fresh fetch every time the row opens — no cached state needed
+  - Path param substitution regex: `/:([^/]+)/g` — check `/id/i.test(param)` for `1`, else `example`
+  - `response.status !== 204` guard before attempting `response.json()` prevents parse errors on No Content responses
+  - `statusClass` helper belongs in `<script setup>` block (not a separate `<script>` block) so it's available to the template
+---
+
 ## 2026-02-18 - US-009
 - What was implemented: Full `HandlerAccordion.vue` with single-expand accordion behavior tracking `expandedKey` ref. `HandlerRow.vue` upgraded from stub to full component with colored HTTP method badges, chevron indicator, and expand/toggle event delegation.
 - Files changed:

@@ -166,8 +166,7 @@
         "Network tab in DevTools shows the fetch to `http://playground.local/...` fulfilled by \"ServiceWorker\""
       ],
       "priority": 10,
-      "passes": false,
-      "inProgress": true
+      "passes": true
     },
     {
       "id": "US-011",
