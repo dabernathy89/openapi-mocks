@@ -5,7 +5,7 @@
   "description": "Documentation site for openapi-mocks",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build && node scripts/copy-md-sources.js",
+    "build": "node scripts/copy-browser-bundle.js && astro build && node scripts/copy-md-sources.js",
     "preview": "astro preview",
     "serve": "wrangler pages dev dist",
     "typecheck": "astro check"
@@ -24,6 +24,7 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.6",
     "@astrojs/vue": "^5.1.4",
+    "@types/js-yaml": "^4.0.9",
     "starlight-typedoc": "^0.21.5",
     "typedoc": "^0.28.17",
     "typedoc-plugin-markdown": "^4.10.0",

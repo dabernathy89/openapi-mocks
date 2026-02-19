@@ -131,7 +131,7 @@
         "The docs build step copies `packages/openapi-mocks/dist-browser/openapi-mocks.browser.js` to `docs/public/playground/openapi-mocks.browser.js`"
       ],
       "priority": 8,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-009",
