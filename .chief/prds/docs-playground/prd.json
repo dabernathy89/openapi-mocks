@@ -148,7 +148,8 @@
         "Expanding a row triggers a fetch (delegated to `HandlerRow`)"
       ],
       "priority": 9,
-      "passes": false
+      "passes": false,
+      "inProgress": true
     },
     {
       "id": "US-010",
