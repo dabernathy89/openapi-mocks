@@ -16,8 +16,8 @@
         "The spec remains valid OpenAPI 3.1.0 (passes `swagger-parser` validation)"
       ],
       "priority": 1,
-      "passes": false,
-      "inProgress": true
+      "passes": true,
+      "inProgress": false
     },
     {
       "id": "US-002",

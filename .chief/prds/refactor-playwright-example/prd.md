@@ -1,0 +1,112 @@
+# Refactor Playwright Example
+
+## Overview
+
+The existing `examples/playwright/` example demonstrates `mocks.data()` + Playwright's `page.route()`. This refactor expands it in two directions:
+
+1. **MSW integration** — add `@msw/playwright` so that `mocks.handlers()` is used as the interception layer instead of raw `page.route()`. MSW handlers receive the real `Request` object, enabling features like `echoPathParams` and request-body-aware transforms that are impossible with `mocks.data()` alone.
+
+2. **Broader schema and feature coverage** — extend the OpenAPI spec with `anyOf`, `oneOf`, and `allOf` schemas (within the existing orders/users domain) and add tests for every major library option not yet covered.
+
+The existing `mocks.data()` + `page.route()` tests are **kept as-is**; new tests are added alongside them.
+
+## User Stories
+
+### US-001: Extend acme-api.yaml with anyOf, oneOf, and allOf schemas
+**Priority:** 1
+**Description:** As a library author, I want the example spec to include composite schema keywords so that users can see how `openapi-mocks` handles these patterns.
+
+**Acceptance Criteria:**
+- [ ] Add `Order` schema using `allOf` to extend a `BaseEntity` (id, createdAt, updatedAt) with order-specific fields (status enum, total, currency)
+- [ ] Add `OrderItem` schema using `oneOf` with a discriminator: `PhysicalProduct` (weight, dimensions) and `DigitalProduct` (downloadUrl, licenseKey)
+- [ ] Add `PaymentMethod` schema using `anyOf`: `CreditCard` (last4, brand) and `BankTransfer` (accountLast4, routingNumber)
+- [ ] Add `GET /orders` endpoint (operationId: `listOrders`) returning paginated orders array
+- [ ] Add `GET /orders/{orderId}` endpoint (operationId: `getOrder`) returning a single `Order` with embedded `OrderItem[]` and `PaymentMethod`
+- [ ] Add `POST /orders` endpoint (operationId: `createOrder`) with 201 and 422 responses
+- [ ] The spec remains valid OpenAPI 3.1.0 (passes `swagger-parser` validation)
+
+---
+
+### US-002: Update demo app to support order routes
+**Priority:** 2
+**Description:** As a user of the example, I want the demo app to render order data so that the Playwright tests have real UI to assert against.
+
+**Acceptance Criteria:**
+- [ ] Add `/orders` route to `app/app.js` that fetches `GET /api/v1/orders` and renders an order list
+- [ ] Add `/orders/:id` route that fetches `GET /api/v1/orders/:orderId` and renders order detail (including items and payment method)
+- [ ] Each order card has `data-testid="order-card"`
+- [ ] Order detail page has `data-testid="order-id"`, `data-testid="order-status"`, `data-testid="order-total"`
+- [ ] Each order item has `data-testid="order-item"` and a `data-item-type` attribute (`physical` or `digital`)
+- [ ] Payment method section has `data-testid="payment-method"` and `data-payment-type` attribute
+- [ ] Nav in `app/index.html` includes an "Orders" link
+
+---
+
+### US-003: Set up @msw/playwright fixture
+**Priority:** 3
+**Description:** As a developer writing Playwright tests, I want a pre-configured `network` fixture that wires `mocks.handlers()` into the test so that I can use MSW's full handler API without boilerplate.
+
+**Acceptance Criteria:**
+- [ ] Add `msw` and `@msw/playwright` to `devDependencies` in `examples/playwright/package.json`
+- [ ] Run `npx msw init app/ --save` and commit the generated `mockServiceWorker.js` (or document it in setup)
+- [ ] Create `e2e/fixtures.ts` that exports an extended `test` and `expect` using `@msw/playwright`'s `defineNetworkFixture`
+- [ ] The fixture accepts an optional `handlers` array so individual tests can override or extend the base handler set
+- [ ] All new MSW-based spec files import `{ test, expect }` from `./fixtures` instead of `@playwright/test`
+
+---
+
+### US-004: Add MSW handler tests for request-aware features
+**Priority:** 4
+**Description:** As a library author, I want tests that demonstrate features only possible through `mocks.handlers()` (not `mocks.data()`) so that the example clearly shows when to use each API.
+
+**Acceptance Criteria:**
+- [ ] Add `e2e/msw-handlers.spec.ts` with a `test.describe("echoPathParams")` block
+  - [ ] Test navigates to `/users/usr_abc123`, asserts `[data-testid="user-id"]` shows `usr_abc123` (the exact path param echoed back)
+  - [ ] Uses `mocks.handlers({ echoPathParams: true, operations: { getUser: {} } })`
+- [ ] Add a `test.describe("request-body transform")` block
+  - [ ] Test posts to create a user, handler's transform reads the request body and echoes `username` into the response
+  - [ ] Uses `mocks.handlers({ operations: { createUser: { transform: (data, req) => ... } } })`
+- [ ] Add a `test.describe("statusCode override via handler")` block
+  - [ ] Test forces `createOrder` to return 422 and asserts the error UI renders correctly
+  - [ ] Uses `mocks.handlers({ operations: { createOrder: { statusCode: 422, transform: ... } } })`
+
+---
+
+### US-005: Add E2E tests for anyOf / oneOf / allOf schemas
+**Priority:** 5
+**Description:** As a library user, I want to see example tests that assert on data generated from composite schemas so that I understand how `openapi-mocks` handles `anyOf`, `oneOf`, and `allOf`.
+
+**Acceptance Criteria:**
+- [ ] Add `e2e/composite-schemas.spec.ts`
+- [ ] `test.describe("allOf — Order extends BaseEntity")`:
+  - [ ] Generates order data, asserts response has both `BaseEntity` fields (`id`, `createdAt`) and Order-specific fields (`status`, `total`)
+- [ ] `test.describe("oneOf — OrderItem discriminator")`:
+  - [ ] Generates an order with items, asserts each item has either `PhysicalProduct` fields OR `DigitalProduct` fields (not both)
+  - [ ] Discriminator field (`type`) is always present
+- [ ] `test.describe("anyOf — PaymentMethod")`:
+  - [ ] Generates an order, asserts payment method has fields from at least one of `CreditCard` or `BankTransfer`
+- [ ] All three describes use `mocks.data()` + `page.route()` (same pattern as existing tests) — no MSW fixture required
+- [ ] Tests can run headlessly in CI
+
+---
+
+### US-006: Add tests for uncovered library features
+**Priority:** 6
+**Description:** As a library author, I want complete feature coverage in the example so that every documented option is demonstrated with a working test.
+
+**Acceptance Criteria:**
+- [ ] Add `e2e/library-features.spec.ts`
+- [ ] `test.describe("statusCodes filtering")`:
+  - [ ] Uses `mocks.data({ statusCodes: [200], operations: { listUsers: {}, listOrders: {} } })`
+  - [ ] Asserts that only 200 responses are generated (no 4xx data in the result map)
+  - [ ] Navigates to `/dashboard`, asserts both user count and order count are populated
+- [ ] `test.describe("multiple operations at once")`:
+  - [ ] Single `mocks.data()` call with `listUsers`, `listOrders`, and `getOrder` — intercepts all three routes
+  - [ ] Asserts each intercepted endpoint returns data
+- [ ] `test.describe("generateFromSchema — standalone utility")`:
+  - [ ] Imports `generateFromSchema` directly
+  - [ ] Generates data from the `Order` schema inline (no spec file) and asserts shape
+  - [ ] This test does NOT navigate to any page — it's a pure Node.js assertion
+- [ ] `test.describe("seed reproducibility")`:
+  - [ ] Two separate `mocks.data()` calls with the same seed produce identical output
+  - [ ] Two calls with different seeds produce different output (assert at least one field differs)
