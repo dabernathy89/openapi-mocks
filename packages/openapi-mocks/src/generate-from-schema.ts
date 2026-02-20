@@ -44,7 +44,7 @@ export interface GenerateFromSchemaOptions {
 /**
  * Generate a mock value for a single OpenAPI schema object.
  *
- * Useful for ad-hoc mocking in unit tests or Storybook stories
+ * Useful for ad-hoc mocking in unit tests
  * without needing a full OpenAPI document.
  *
  * Uses the full resolution priority chain:
