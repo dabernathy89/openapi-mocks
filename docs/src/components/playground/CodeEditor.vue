@@ -67,6 +67,15 @@ function handleChange(value: string) {
 
 .editor-wrap :deep(.cm-editor) {
   height: 100%;
+  font-family: monospace;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Starlight's prose spacing (e.g. * + *) leaks margin-top into CodeMirror
+   internals, pushing the cursor/selection layers out of sync with the text. */
+.editor-wrap :deep(.cm-editor *) {
+  margin-top: 0;
 }
 
 .editor-wrap :deep(.cm-scroller) {

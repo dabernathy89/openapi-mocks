@@ -23,10 +23,22 @@ export function usePlayground() {
 
   const routes: ComputedRef<HandlerInfo[]> = computed(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return activeHandlers.value.map((h: any) => ({
-      method: (h?.info?.method ?? '').toUpperCase(),
-      path: h?.info?.path ?? '',
-    }));
+    return activeHandlers.value.map((h: any) => {
+      const rawPath: string = h?.info?.path ?? '';
+      // MSW v2 stores the full URL in info.path when handlers are registered with
+      // an absolute URL. Extract just the pathname so HandlerRow can prepend its
+      // own base URL without duplication.
+      let path = rawPath;
+      try {
+        path = new URL(rawPath).pathname;
+      } catch {
+        // rawPath is already a relative path like /pets/{petId}
+      }
+      return {
+        method: (h?.info?.method ?? '').toUpperCase(),
+        path,
+      };
+    });
   });
 
   // Debounce helpers

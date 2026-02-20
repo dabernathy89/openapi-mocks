@@ -59,3 +59,4 @@ CHANGELOG.md
 .chief/prds/*/claude.log
 docs/.wrangler/tmp
 .claude/settings.local.json
+.playwright-mcp

@@ -1,8 +1,50 @@
 ---
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import PlaygroundApp from '../components/playground/Playground.vue';
+
+// msw/browser is intentionally NOT in the import map — esm.sh injects a process
+// polyfill with versions.node set, which trips MSW's isNodeProcess() invariant
+// inside setupWorker(). The msw/browser chunk is bundled by Vite instead.
+//
+// The main 'msw' entry (http, HttpResponse) is safe on esm.sh because those
+// utilities never call isNodeProcess(). The browser bundle needs it for handlers().
+const importMap = JSON.stringify({
+  imports: {
+    'msw':                         'https://esm.sh/msw@2.12.10',
+    '@faker-js/faker':             'https://esm.sh/@faker-js/faker@10.3.0',
+    '@apidevtools/swagger-parser': 'https://esm.sh/@apidevtools/swagger-parser@12.1.0',
+  },
+});
 ---
 
-<StarlightPage frontmatter={{ title: 'Playground' }}>
+<StarlightPage
+  frontmatter={{
+    title: 'Playground',
+    tableOfContents: false,
+    head: [{ tag: 'script', attrs: { type: 'importmap' }, content: importMap }],
+  }}
+>
   <PlaygroundApp client:only="vue" />
 </StarlightPage>
+
+<style is:global>
+  /* Break playground out of Starlight's content container constraints */
+  .sl-container:has(.playground) {
+    max-width: none;
+  }
+  .content-panel:has(.playground) {
+    padding-inline: 0;
+  }
+  /* Hide the auto-generated heading and its container */
+  main:has(.playground) > div.content-panel:first-of-type {
+    display: none;
+  }
+  /* Hide the "View as Markdown" link */
+  .sl-container:has(.playground) .view-as-markdown {
+    display: none;
+  }
+  /* Prevent page-level scrolling — playground manages its own scroll */
+  main:has(.playground) {
+    overflow: hidden;
+  }
+</style>

@@ -10,8 +10,14 @@ export default defineConfig({
     },
     outDir: 'dist-browser',
     rollupOptions: {
-      // Externalize only msw — bundle everything else inline
-      external: (id) => id === 'msw' || id.startsWith('msw/'),
+      // These packages are served via an import map (esm.sh CDN) in the docs playground.
+      // Externalizing them keeps the browser bundle small and lets esm.sh supply
+      // Node.js polyfills (including Buffer) that swagger-parser needs.
+      external: (id) =>
+        id === 'msw' ||
+        id.startsWith('msw/') ||
+        id === '@faker-js/faker' ||
+        id === '@apidevtools/swagger-parser',
     },
     sourcemap: true,
   },

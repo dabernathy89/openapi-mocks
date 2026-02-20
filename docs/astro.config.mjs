@@ -4,6 +4,13 @@ import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 import vue from '@astrojs/vue';
 
 export default defineConfig({
+  vite: {
+    build: {
+      rollupOptions: {
+        external: ['/playground/openapi-mocks.browser.js'],
+      },
+    },
+  },
   integrations: [
     vue(),
     starlight({
@@ -30,6 +37,7 @@ export default defineConfig({
         }),
       ],
       sidebar: [
+        { label: 'Playground', link: '/playground/' },
         {
           label: 'Guides',
           items: [
